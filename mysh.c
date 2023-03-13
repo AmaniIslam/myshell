@@ -77,8 +77,8 @@ void batchMode(char *fName){
         close(FD);
         return;
             }
-        }
             sepToken = strtok(NULL, "\n");
+        }
     }
         
     if (nBytes == -1) {
