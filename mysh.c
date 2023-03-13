@@ -32,6 +32,34 @@ int main(int argc, char *argv[]){
 }
 //________________________________________________________________________________
 int execCommand(char* command){
+    char * arr[BUFF_SIZE];
+/*Initialize an array to hold the command arguments and a variable to keep 
+track of the number of arguments:
+*/
+    int aCount = 0;
+
+    char * token = strtok(command, " \t\n");
+
+
+    while(token!=NULL){
+        // if(token=="<"){
+
+        // }
+        char* ptr = strchr(token, '<');
+        
+        if (ptr != NULL) {
+        printf("Found\n");
+        }
+
+        arr[aCount]=token;
+        aCount++;
+        token = strtok(NULL, " \t\n");
+    }
+    
+    arr[aCount] = NULL;  // for execvp 
+
+  pid_t pid = fork();//child process
+
 return 1; 
 }
 
