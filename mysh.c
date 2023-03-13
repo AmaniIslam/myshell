@@ -11,6 +11,7 @@
 void batchMode(char *fName);
 void interactiveMode();
 void introTag(int key);
+int execCommand(char* command);
 
 int main(int argc, char *argv[]){   
     if(argc==2){
@@ -22,13 +23,19 @@ int main(int argc, char *argv[]){
         //interactive mode
         interactiveMode();
     }
-    if(argc==0){
-        printf("No arguments passed in");
+    if(argc==0 || argc > 2){
+        printf("Error\n");
         return EXIT_FAILURE;
     }
 
     return 0; 
 }
+//________________________________________________________________________________
+int execCommand(char* command){
+return 1; 
+}
+
+
 //________________________________________________________________________________
 void batchMode(char *fName){
     
@@ -50,18 +57,28 @@ void batchMode(char *fName){
     while((nBytes=read(FD,buffer,BUFF_SIZE))>0){
             if(buffer[nBytes-1]=='\n'){
                 buffer[nBytes-1]='\0';
-                //function call to parse the commands  
-                //right here
-            }
-    
+            }    
         //write(STDOUT_FILENO, buffer, nBytes);
 
-        //buffer command is the word exit
-        if (strcmp(buffer, "exit\n") == 0){
-            close(FD);
-            return;
-        }
+    /* parsing the input command string into separate 
+    command tokens and then executing each 
+    token as a separate command by calling the 
+    */
+        char *sepToken = strtok(buffer,"\n");
 
+        while(sepToken!=NULL){
+            
+            int flag = execCommand(sepToken);
+
+            introTag(flag);
+
+        //exit in file it will terminate
+        if (strcmp(buffer, "exit") == 0){
+        close(FD);
+        return;
+            }
+        }
+            sepToken = strtok(NULL, "\n");
     }
         
     if (nBytes == -1) {
@@ -73,14 +90,14 @@ void batchMode(char *fName){
 }
 //________________________________________________________________________________
 void interactiveMode(){
-    printf("Welcome to mysh!\n");
+    printf("Greetings...Welcome to mysh!\n");
 
     //indicates to the print
-    int currPoint=0;
+    int flag=0;
 
     while(1){
         //print command
-        introTag(currPoint); 
+        introTag(flag); 
 
         char buffer[BUFF_SIZE];
         //read to standard input
@@ -104,6 +121,9 @@ void interactiveMode(){
             return;
         }
     }
+    
+    printf("Bye!\n");
+
 }
 //________________________________________________________________________________
 void introTag(int key){
