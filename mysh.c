@@ -3,6 +3,7 @@
 #include <string.h>
 #include <fcntl.h>
 #include <unistd.h>
+#include <sys/wait.h>
 
 //arbitrary value for the max command line characters
 
@@ -24,7 +25,7 @@ int main(int argc, char *argv[]){
         interactiveMode();
     }
     if(argc==0 || argc > 2){
-        printf("Error\n");
+        printf("this one Error\n");
         return EXIT_FAILURE;
     }
 
@@ -42,15 +43,20 @@ track of the number of arguments:
 
 
     while(token!=NULL){
-        // if(token=="<"){
-
-        // }
+        //see if this works...not sure.
         char* ptr = strchr(token, '<');
-        
+            
         if (ptr != NULL) {
         printf("Found\n");
         }
 
+        if (strcmp(token, "cd") == 0) {
+            
+        }
+        if (strcmp(token, "pwd") == 0) {
+            
+        }
+        
         arr[aCount]=token;
         aCount++;
         token = strtok(NULL, " \t\n");
@@ -58,9 +64,33 @@ track of the number of arguments:
     
     arr[aCount] = NULL;  // for execvp 
 
-  pid_t pid = fork();//child process
+//**********************************************************************************
+    pid_t pid = fork();//child process
+    
+    if(pid == 0){
+    execvp(arr[0], arr);
+    perror("execvp");
+    exit(1);
+    }
+    else if(pid>0){
+        /*blocks the parent process until the child 
+        process exits or is interrupted by a signal.*/
+        int cPoint; 
+        waitpid(pid, &cPoint, 0);
+/*If the child process exited normally, we return 
+its exit status using WEXITSTATUS().*/
+        if(WIFEXITED(cPoint)){
+            return WEXITSTATUS(cPoint);   
+        }
+        else{
+            return -1; 
+        }
+    }
 
-return 1; 
+    else{
+        perror("fork");
+        return -1;
+    }
 }
 
 
@@ -91,7 +121,7 @@ void batchMode(char *fName){
     /* parsing the input command string into separate 
     command tokens and then executing each 
     token as a separate command by calling the 
-    */
+    */  
         char *sepToken = strtok(buffer,"\n");
 
         while(sepToken!=NULL){
@@ -130,7 +160,7 @@ void interactiveMode(){
         char buffer[BUFF_SIZE];
         //read to standard input
         int nBytes = read(STDIN_FILENO, buffer, BUFF_SIZE);
-
+        
         if(nBytes==0){
             //exit while loop
             break;
@@ -140,17 +170,23 @@ void interactiveMode(){
             buffer[nBytes-1] = '\0';
         }
 
+        // if(strstr(buffer,"cd")!= NULL){
+        //     cd(pathname);
+        // }
+        // if(strstr(buffer,"pwd")!= NULL){
+        //     pwd();
+        // }
         // Execute command
         //Make this command
-        //currPoint = execute_command(buffer);
+        flag = execCommand(buffer);
 
         // Check for exit command
-        if (strcmp(buffer, "exit") == 0) {
+        if (strcmp(buffer, "exit\n") == 0) {
             return;
         }
     }
     
-    printf("Bye!\n");
+    printf("Exiting!\n");
 
 }
 //________________________________________________________________________________
