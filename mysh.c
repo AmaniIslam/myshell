@@ -7,7 +7,7 @@
 
 //arbitrary value for the max command line characters
 
-#define BUFF_SIZE 1024
+#define BUFF_SIZE 512
 
 void batchMode(char *fName);
 void interactiveMode();
@@ -40,7 +40,6 @@ track of the number of arguments:
     int aCount = 0;
 
     char * token = strtok(command, " \t\n");
-
 
     while(token!=NULL){
         //see if this works...not sure.
@@ -177,7 +176,8 @@ void interactiveMode(){
         //     pwd();
         // }
         // Execute command
-        //Make this command
+        // Make this command
+        
         flag = execCommand(buffer);
 
         // Check for exit command
@@ -185,9 +185,7 @@ void interactiveMode(){
             return;
         }
     }
-    
     printf("Exiting!\n");
-
 }
 //________________________________________________________________________________
 void introTag(int key){
