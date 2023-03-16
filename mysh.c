@@ -94,64 +94,88 @@ int main(int argc, char *argv[])
     return 0;
 }
 //________________________________________________________________________________
-int execCommand(char *command)
-{
+int execCommand(char *command){
     char *arr[BUFF_SIZE];
     /*Initialize an array to hold the command arguments and a variable to keep
     track of the number of arguments:
     */
     int aCount = 0;
-    char *token = strtok(command, " |\t\n");
+    char *token = strtok(command, " \t\n");
 
-<<<<<<< HEAD
-    char * token = strtok(command, " \t\n");
-
-    while(token!=NULL){
-        //see if this works...not sure.
-        char* ptr = strchr(token, '<');
-            
-        if (ptr != NULL) {
-        printf("Found\n");
-=======
-    while (token != NULL)
-    {
+    while (token != NULL){
         // see if this works...not sure.
 
         if (strchr(token, '<') != NULL)
         {
             printf("%s\n", token);
-            /*
-            arr[aCount] = strtok(NULL, "<>");
-            aCount++;
-            token = strtok(NULL, " |<>\t\n");
-            printf("Found\n");*/
->>>>>>> ab827415138de8e139cab6a4dd002bb5892dbfc4
         }
 
-        if (strcmp(token, "pwd") == 0)
+       if (strcmp(token, "*") == 0)
         {
+            //wildcard
+        }
+
+
+        if (arr[0] == '/') {
+        printf("%s is an absolute path\n", command);
+        }
+
+        if (strcmp(token, "exit") == 0)
+        {
+            //test this out
+            printf("Exiting!\n");
+            exit(1);
         }
 
         arr[aCount] = token;
         aCount++;
-        token = strtok(NULL, " |\t\n");
+        token = strtok(NULL, " \t\n");
     }
-    /*
-        for (int i = 0; arr[i] != NULL; i++)
-            printf("%s\n", arr[i]);*/
-
+/*The loop then continues to call strtok() with NULL as the first argument, which 
+tells it to continue tokenizing the same string. It returns a pointer to the next 
+token, or NULL if there are no more tokens. Each 
+non-NULL token is stored in the args array and arg_count is incremented again.
+*/
     arr[aCount] = NULL; // for execvp
 
     //**********************************************************************************
 
     if (strcmp(arr[0], "cd") == 0)
-    {
-        char newdir[1024];
-        sprintf(newdir, "%s/%s", getcwd(NULL, 0), arr[1]);
-        chdir(newdir);
+    {   
+       if(arr[2]==NULL){
+
+        chdir(arr[1]);
+
         perror("chdir");
-        // exit(EXIT_FAILURE);
+        
+       return 0;
+       }
+       else{
+       printf("error too many cd args\n");
+       //error condition stating wrong cd format more than one argument.
+       exit(1);
+       }
     }
+
+    if(strcmp(arr[0],"pwd")==0){
+        //pwd has no arguments thus 1 should be empty or NULL 
+        if(arr[1]==NULL){
+
+        char cwd[1024];
+        if (getcwd(cwd, sizeof(cwd)) != NULL) {
+            printf("%s\n", cwd);
+        } 
+        else{
+            perror("pwd");
+            exit(1);
+        }
+        return 0;  
+    }
+    else{
+        printf("error too many pwd args\n");
+        exit(1);
+    }
+}       
 
     pid_t pid = fork(); // child process
 
@@ -188,8 +212,9 @@ int execCommand(char *command)
     return 1;
 }
 
-void introTag(int key)
-{
+
+//**************************************************************************
+void introTag(int key){
     if (key != 0)
     {
         write(STDOUT_FILENO, "!mysh> ", 7);
@@ -201,6 +226,9 @@ void introTag(int key)
     }
 }
 
+
+
+//___________________________________________________________________________
 /*
 void batchMode(char *fName)
 {
@@ -288,10 +316,6 @@ void interactiveMode()
         // }
         // Execute command
         // Make this command
-<<<<<<< HEAD
-        
-=======
->>>>>>> ab827415138de8e139cab6a4dd002bb5892dbfc4
         flag = execCommand(buffer);
 
         // Check for exit command
@@ -300,10 +324,6 @@ void interactiveMode()
             return;
         }
     }
-<<<<<<< HEAD
-=======
-
->>>>>>> ab827415138de8e139cab6a4dd002bb5892dbfc4
     printf("Exiting!\n");
 }
 //________________________________________________________________________________
