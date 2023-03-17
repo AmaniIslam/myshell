@@ -1,0 +1,11 @@
+total 81
+-rw-r----- 1 mn712 mn712   327 Mar 16 13:40 amani.txt
+-rwxr-x--- 1 mn712 mn712 16696 Mar 16 13:50 hello
+-rw-r----- 1 mn712 mn712    85 Mar 16 13:49 hello.c
+-rw-r----- 1 mn712 mn712   182 Mar  9 15:30 Makefile
+-rwxr-x--- 1 mn712 mn712 67688 Mar 16 22:15 mysh
+-rw-r----- 1 mn712 mn712  9759 Mar 16 22:15 mysh.c
+-rw-r----- 1 mn712 mn712     5 Mar 16 22:12 output.txt
+-rw-r----- 1 mn712 mn712  1815 Mar 16 11:56 README.md
+-rw-r----- 1 mn712 mn712     0 Mar 16 22:17 rutgers.txt
+drwxr-x--- 2 mn712 mn712     2 Mar 16 13:58 samplefolder

@@ -152,7 +152,8 @@ int execCommand(char *command){
     // if(flag!=0){
     // redirection(arr,flag,pos);
     // }
-    
+        // printf("\n\ntest1\n\n");
+
     //**********************************************************************************
 
     if (strcmp(arr[0], "cd") == 0)
@@ -196,6 +197,7 @@ int execCommand(char *command){
     
     if(flag!=0){
     redirection(arr,flag,pos);
+    return 0;
     }
 //********************************************************************************
     pid_t pid = fork(); // child process
@@ -252,9 +254,11 @@ void redirection(char ** arr,int flag,int pos){
                     perror("dup2");
                     exit(1);
                 }
-                execlp(arr[0],arr[0],"-l",NULL);
+                // execlp(arr[0],arr[0],"-l",NULL);
+                char *set[2]={"cat","amani.txt"};            
+                execvp(arr[0], set);//fix
 
-                perror("execlp");
+                perror("execvp");
                 exit(EXIT_FAILURE);
             }
         else{
@@ -270,11 +274,14 @@ void redirection(char ** arr,int flag,int pos){
         int stat; 
         pid_t pid;
         int fDir = open(arr[pos+1], O_RDONLY);
+
         if (fDir == -1) {
         perror("open");
         exit(1);
         }
+
         pid = fork();
+
         if (pid == -1) {
         perror("fork");
         exit(1);
@@ -284,7 +291,8 @@ void redirection(char ** arr,int flag,int pos){
                 perror("dup2");
                 exit(1);
             }
-            execlp(arr[0], arr[0], "-l", NULL);//fix
+            char *set[2]={"cat","amani.txt"};            
+            execvp(arr[0], set);//fix
             perror("exec");
             exit(1);
         }
@@ -302,8 +310,9 @@ void redirection(char ** arr,int flag,int pos){
     else{
         printf("Error");
         exit(1); 
-    }
+    
 }
+
 /*
 errors that need to be fixed 
 cat: invalid option -- 'l'
