@@ -16,6 +16,9 @@ void interactiveMode();
 void introTag(int key);
 int execCommand(char *command);
 int redirection(char **arr, int flag, char *file);
+int wildCard(char **arr,int pos);
+
+
 int main(int argc, char *argv[])
 {
     int FD;
@@ -105,10 +108,9 @@ int execCommand(char *command)
     */
     int aCount = 0;
     char *token = strtok(command, " \t\n");
-    glob_t globbuf;
-    int k;
     int flag = 0;
-    // int pCheck=0;
+    int pos=0;
+    int wCard = 0; 
     while (token != NULL)
     {
         // see if this works...not sure.
@@ -132,15 +134,9 @@ int execCommand(char *command)
 
         if (strchr(token, '*') != NULL)
         { // wildcard
-            if (glob(arr[aCount], GLOB_NOCHECK | GLOB_TILDE, NULL, &globbuf) == 0)
-            {
-                for (k = 0; k < globbuf.gl_pathc; k++)
-                {
-                    arr[aCount + k] = globbuf.gl_pathv[k];
-                }
-                arr[aCount + k] = NULL;
-                globfree(&globbuf);
-            }
+            wCard = 1;
+            pos=aCount; 
+
         }
 
         if (strcmp(token, "exit") == 0)
@@ -152,35 +148,67 @@ int execCommand(char *command)
         arr[aCount] = token;
         aCount++;
         token = strtok(NULL, " \t\n");
+
     }
+
     arr[aCount] = NULL; // for execvp
 
-    // if(flag!=0){
-    // redirection(arr,flag,pos);
-    // }
-<<<<<<< HEAD
-        // printf("\n\ntest1\n\n");
-=======
->>>>>>> db0e877df980e3827f7cdd5785caa685a0683451
+    if(wCard!=0){
+    return wildCard(arr,pos);
+    }
 
     //**********************************************************************************
 
+    if(arr[0][0] == '~' && (arr[0][1] == '\0' || arr[0][1] == '/')) {
+        //extention 3.2            : ~/
+        char homePath[BUFF_SIZE];
+        const char* homeDirectory = getenv("HOME");
+        if (homeDirectory == NULL) {
+        fprintf(stderr, "Error: HOME environment variable not set\n");
+        return -1;
+        }
+        snprintf(homePath, BUFF_SIZE, "%s%s", homeDirectory, *arr + 1);
+        int err = chdir(homePath);
+        if (err != 0) {
+        perror("chdir");
+        return 2;
+        }
+        return 0;
+    }
+
     if (strcmp(arr[0], "cd") == 0)
     {
-        if (arr[2] == NULL)
-        {
+        if(arr[1]==NULL){
+            //extention 3.2
+            char homePath[BUFF_SIZE];
+            const char* homeDirectory = getenv("HOME");
+            if (homeDirectory == NULL) {
+            fprintf(stderr, "Error: HOME environment variable not set\n");
+            return -1;
+            }
 
+
+            strcpy(homePath, homeDirectory);
+
+            int err = chdir(homePath);
+                if (err != 0) {
+                perror("chdir");
+                return 2;
+                }
+            return 0;
+            //WORKING ON REMAINING>
+        }
+        else if (arr[2] == NULL){
+            
             chdir(arr[1]);
 
             perror("chdir");
 
             return 0;
         }
-        else
-        {
+        else{
             printf("error too many cd args\n");
-            // error condition stating wrong cd format more than one argument.
-            exit(1);
+            return 1;
         }
     }
 
@@ -208,15 +236,6 @@ int execCommand(char *command)
             exit(1);
         }
     }
-<<<<<<< HEAD
-}       
-// if (arr[0][0] == '/')
-// asprintf(&arr[0], "%s%s", ".", arr[0]);
-    
-    if(flag!=0){
-    redirection(arr,flag,pos);
-    return 0;
-=======
     // if (arr[0][0] == '/')
     // asprintf(&arr[0], "%s%s", ".", arr[0]);
 
@@ -224,10 +243,8 @@ int execCommand(char *command)
     {
         token = strtok(NULL, " \t\n");
         return redirection(arr, flag, token);
->>>>>>> db0e877df980e3827f7cdd5785caa685a0683451
     }
 
-    printf("run\n");
     //********************************************************************************
     pid_t pid = fork(); // child process
 
@@ -289,27 +306,10 @@ int redirection(char **arr, int flag, char *file)
                 perror("dup2");
                 return 1;
             }
-<<<<<<< HEAD
-            else if(pid==0){
-                if(dup2(fd,STDOUT_FILENO)==-1){
-                    perror("dup2");
-                    exit(1);
-                }
-                // execlp(arr[0],arr[0],"-l",NULL);
-                char *set[2]={"cat","amani.txt"};            
-                execvp(arr[0], set);//fix
-
-                perror("execvp");
-                exit(EXIT_FAILURE);
-            }
-        else{
-            waitpid(pid, NULL, 0);
-=======
             execvp(arr[0], arr);
 
             perror("execvp");
             return 1;
->>>>>>> db0e877df980e3827f7cdd5785caa685a0683451
         }
         else
             waitpid(pid, NULL, 0);
@@ -327,33 +327,18 @@ int redirection(char **arr, int flag, char *file)
         //<
         int stat;
         pid_t pid;
-<<<<<<< HEAD
-        int fDir = open(arr[pos+1], O_RDONLY);
-
-        if (fDir == -1) {
-        perror("open");
-        exit(1);
-=======
         int fDir = open(file, O_RDONLY);
         if (fDir == -1)
         {
             perror("open");
             return 1;
->>>>>>> db0e877df980e3827f7cdd5785caa685a0683451
         }
 
         pid = fork();
-<<<<<<< HEAD
-
-        if (pid == -1) {
-        perror("fork");
-        exit(1);
-=======
         if (pid == -1)
         {
             perror("fork");
             return 1;
->>>>>>> db0e877df980e3827f7cdd5785caa685a0683451
         }
         else if (pid == 0)
         { // child
@@ -362,12 +347,7 @@ int redirection(char **arr, int flag, char *file)
                 perror("dup2");
                 return 1;
             }
-<<<<<<< HEAD
-            char *set[2]={"cat","amani.txt"};            
-            execvp(arr[0], set);//fix
-=======
             execvp(arr[0], arr); // fix
->>>>>>> db0e877df980e3827f7cdd5785caa685a0683451
             perror("exec");
             return 1;
         }
@@ -385,25 +365,29 @@ int redirection(char **arr, int flag, char *file)
     else
     {
         printf("Error");
-<<<<<<< HEAD
-        exit(1); 
-    
-=======
         return 1;
     }
     return 1;
->>>>>>> db0e877df980e3827f7cdd5785caa685a0683451
 }
+//**************************************************************************
+int wildCard(char**arr, int pos){
+    int k;    
+    glob_t globbuf;
 
-/*
-errors that need to be fixed
-cat: invalid option -- 'l'
-Try 'cat --help' for more information.
-cat: '<': No such file or directory
-hello
-!mysh>
-*/
+    int val = glob(arr[pos], GLOB_NOCHECK | GLOB_TILDE, NULL, &globbuf);
+        
+        if (val != 0) {
+        printf("Error: glob() failed \n");
+        return 1;
+        }
 
+    for(k=0;k < globbuf.gl_pathc; k++){
+        printf("%s\n", globbuf.gl_pathv[k]);
+    }
+    globfree(&globbuf);
+
+    return 0;
+}
 //**************************************************************************
 void introTag(int key)
 {

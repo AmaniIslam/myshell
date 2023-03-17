@@ -1,0 +1,15 @@
+camden.txt
+file1.txt
+file2.txt
+foo1.txt
+foo2.txt
+foo.bar
+funny.txt
+hello.c
+Makefile
+mysh
+mysh.c
+output.txt
+README.md
+rutgers.txt
+samplefolder
