@@ -1,0 +1,7 @@
+total 51
+-rw-r----- 1 mn712 mn712     0 Mar 16 00:25 amani.txt
+-rw-r----- 1 mn712 mn712   182 Mar  9 15:30 Makefile
+-rwxr-x--- 1 mn712 mn712 58128 Mar 16 13:38 mysh
+-rw-r----- 1 mn712 mn712  8440 Mar 16 13:39 mysh.c
+-rw-r----- 1 mn712 mn712  1815 Mar 16 11:56 README.md
+drwxr-x--- 2 mn712 mn712     2 Mar 15 18:40 samplefolder

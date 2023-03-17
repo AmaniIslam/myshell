@@ -4,16 +4,18 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <sys/wait.h>
+#include <glob.h>
+#include <sys/stat.h>
 
 // arbitrary value for the max command line characters
 
-#define BUFF_SIZE 512
+#define BUFF_SIZE 1024
 
 void batchMode(char *fName);
 void interactiveMode();
 void introTag(int key);
 int execCommand(char *command);
-
+void redirection(char** arr,int flag,int pos);
 int main(int argc, char *argv[])
 {
     int FD;
@@ -52,7 +54,7 @@ int main(int argc, char *argv[])
     */
     while ((nBytes = read(FD, buffer, BUFF_SIZE)) > 0)
     {
-
+   
         if (buffer[nBytes - 1] == '\n')
             buffer[nBytes - 1] = '\0';
 
@@ -69,9 +71,10 @@ int main(int argc, char *argv[])
         {
 
             flag = execCommand(sepToken);
-
+            
+            if(argc==1)
             introTag(flag);
-
+            
             // exit in file it will terminate
             if (strcmp(buffer, "exit") == 0)
             {
@@ -101,28 +104,41 @@ int execCommand(char *command){
     */
     int aCount = 0;
     char *token = strtok(command, " \t\n");
-
+    glob_t globbuf;
+    int k;
+    int flag=0;
+    int pos=0;
+    // int pCheck=0;
     while (token != NULL){
         // see if this works...not sure.
 
-        if (strchr(token, '<') != NULL)
-        {
-            printf("%s\n", token);
+        if (strcmp(token, ">") == 0){
+        flag=1;
+        pos=aCount;  
         }
 
-       if (strcmp(token, "*") == 0)
-        {
-            //wildcard
-        }
+        if (strcmp(token, "<") == 0){
+        flag=2;
+        pos=aCount;
+        }  
+        
+        // if (strcmp(token, "|") == 0){
+        // pCheck=1;
+        // pos=aCount;
+        // }  
 
-
-        if (arr[0] == '/') {
-        printf("%s is an absolute path\n", command);
+       if (strchr(token, '*') != NULL){//wildcard
+            if (glob(arr[aCount], GLOB_NOCHECK | GLOB_TILDE, NULL, &globbuf) == 0) {
+                for (k = 0; k < globbuf.gl_pathc; k++) {
+                    arr[aCount+k]=globbuf.gl_pathv[k];
+            }
+            arr[aCount+k]=NULL;
+            globfree(&globbuf);
+            }
         }
 
         if (strcmp(token, "exit") == 0)
         {
-            //test this out
             printf("Exiting!\n");
             exit(1);
         }
@@ -131,13 +147,12 @@ int execCommand(char *command){
         aCount++;
         token = strtok(NULL, " \t\n");
     }
-/*The loop then continues to call strtok() with NULL as the first argument, which 
-tells it to continue tokenizing the same string. It returns a pointer to the next 
-token, or NULL if there are no more tokens. Each 
-non-NULL token is stored in the args array and arg_count is incremented again.
-*/
     arr[aCount] = NULL; // for execvp
 
+    // if(flag!=0){
+    // redirection(arr,flag,pos);
+    // }
+    
     //**********************************************************************************
 
     if (strcmp(arr[0], "cd") == 0)
@@ -176,7 +191,13 @@ non-NULL token is stored in the args array and arg_count is incremented again.
         exit(1);
     }
 }       
-
+// if (arr[0][0] == '/')
+// asprintf(&arr[0], "%s%s", ".", arr[0]);
+    
+    if(flag!=0){
+    redirection(arr,flag,pos);
+    }
+//********************************************************************************
     pid_t pid = fork(); // child process
 
     if (pid == 0)
@@ -211,7 +232,86 @@ non-NULL token is stored in the args array and arg_count is incremented again.
 
     return 1;
 }
+void redirection(char ** arr,int flag,int pos){
+    if (flag==1){
+        //>
+         pid_t pid;
+            //check first parameter
+            int fd = open(arr[pos+1], O_WRONLY|O_CREAT|O_TRUNC, S_IRUSR|S_IWUSR|S_IRGRP);
+            if(fd<0){
+            perror("open");
+            exit(EXIT_FAILURE);
+            }
+            pid = fork();
+            if(pid ==-1){
+               perror("fork");
+               exit(1);
+            }
+            else if(pid==0){
+                if(dup2(fd,STDOUT_FILENO)==-1){
+                    perror("dup2");
+                    exit(1);
+                }
+                execlp(arr[0],arr[0],"-l",NULL);
 
+                perror("execlp");
+                exit(EXIT_FAILURE);
+            }
+        else{
+            waitpid(pid, NULL, 0);
+        }
+        if (close(fd) == -1) {
+        perror("close");
+        exit(1);
+        }
+    }
+    else if(flag==2){
+        //<
+        int stat; 
+        pid_t pid;
+        int fDir = open(arr[pos+1], O_RDONLY);
+        if (fDir == -1) {
+        perror("open");
+        exit(1);
+        }
+        pid = fork();
+        if (pid == -1) {
+        perror("fork");
+        exit(1);
+        }
+        else if(pid==0){//child
+            if(dup2(fDir, STDIN_FILENO) == -1){
+                perror("dup2");
+                exit(1);
+            }
+            execlp(arr[0], arr[0], "-l", NULL);//fix
+            perror("exec");
+            exit(1);
+        }
+        else{
+            waitpid(pid, &stat, 0);
+            // if (WIFEXITED(stat)) {
+            // printf("Child exited with status %d\n", WEXITSTATUS(stat));
+            // }
+        }
+        if(close(fDir) == -1) {
+        perror("close");
+        exit(1);
+        }
+    }
+    else{
+        printf("Error");
+        exit(1); 
+    }
+}
+/*
+errors that need to be fixed 
+cat: invalid option -- 'l'
+Try 'cat --help' for more information.
+cat: '<': No such file or directory
+hello
+!mysh> 
+*/
 
 //**************************************************************************
 void introTag(int key){
@@ -225,9 +325,6 @@ void introTag(int key){
         write(STDOUT_FILENO, "mysh> ", 6);
     }
 }
-
-
-
 //___________________________________________________________________________
 /*
 void batchMode(char *fName)
