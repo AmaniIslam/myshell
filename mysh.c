@@ -16,7 +16,7 @@ void interactiveMode();
 void introTag(int key);
 int execCommand(char *command);
 int redirection(char **arr, int flag, char *file);
-int wildCard(char **arr,int pos);
+int wildCard(char **arr,int pos,int exCheck);
 
 
 int main(int argc, char *argv[])
@@ -41,7 +41,7 @@ int main(int argc, char *argv[])
     {
         // interactive mode
         FD = STDIN_FILENO;
-        printf("Greetings...Welcome to mysh!\n");
+        printf("Greetings...Welcome to my shell!\n");
         introTag(flag);
     }
 
@@ -110,7 +110,9 @@ int execCommand(char *command)
     char *token = strtok(command, " \t\n");
     int flag = 0;
     int pos=0;
+    // int pCheck =0; 
     int wCard = 0; 
+
     while (token != NULL)
     {
         // see if this works...not sure.
@@ -136,7 +138,6 @@ int execCommand(char *command)
         { // wildcard
             wCard = 1;
             pos=aCount; 
-
         }
 
         if (strcmp(token, "exit") == 0)
@@ -150,14 +151,32 @@ int execCommand(char *command)
         token = strtok(NULL, " \t\n");
 
     }
-
+    int exCheck=0; 
     arr[aCount] = NULL; // for execvp
 
-    if(wCard!=0){
-    return wildCard(arr,pos);
+    //**********************************************************************************
+    // if(arr =='*' && arr [][] == '/'&&){
+
+    // }
+    //   */*.txt
+    //3.3 extension
+//strlen(arr[i])>2 && 
+    for(int i=0; i<aCount;i++){
+        // printf("i count : %d\n",i);
+        // printf("a count : %d\n",aCount);
+        for(int k; k<strlen(arr[i]);k++){
+            // printf("k count : %d\n",k);
+            // printf("strlen count : %ld\n",strlen(arr[i]));
+            if(strlen(arr[i])>2 && arr[i][k]=='*' && arr[i][k+1]=='/' && arr[i][k+2]=='*'){
+                exCheck=1;
+                return wildCard(arr,i,exCheck);
+            }
+        }
     }
 
-    //**********************************************************************************
+    if(wCard!=0){
+    return wildCard(arr,pos,exCheck);
+    }
 
     if(arr[0][0] == '~' && (arr[0][1] == '\0' || arr[0][1] == '/')) {
         //extention 3.2            : ~/
@@ -370,7 +389,32 @@ int redirection(char **arr, int flag, char *file)
     return 1;
 }
 //**************************************************************************
-int wildCard(char**arr, int pos){
+int wildCard(char**arr, int pos,int exCheck){
+    if(exCheck == 1){
+        //3.3 extension portion.
+    //need to double check this ...
+        char *segments[256];
+        int nsegments = 0;
+        char *p = strtok(arr[pos], "/");
+        while (p != NULL) {
+        segments[nsegments++] = p;  // store each segment in the array and increment the count
+        p = strtok(NULL, "/");
+        }
+           char pattern[1024] = "";
+        for (int i = 0; i < nsegments; i++) {
+        if (strchr(segments[i], '*') != NULL) {
+            strcat(pattern, "/*");
+            strcat(pattern, segments[i]);
+            strcat(pattern, "*/");
+        } else {
+            strcat(pattern, "/");
+            strcat(pattern, segments[i]);
+            }
+        }
+        strcat(pattern, "*"); 
+    }
+
+
     int k;    
     glob_t globbuf;
 
@@ -401,3 +445,42 @@ void introTag(int key)
         write(STDOUT_FILENO, "mysh> ", 6);
     }
 }
+
+// int main(int argc, char *argv[]) {
+//     char *path_env = getenv("PATH");
+//     char path[MAX_PATH_LENGTH];
+//     char *dir;
+//     struct stat statbuf;
+//     int i, found = 0;
+
+//     if (argc < 2) {
+//         fprintf(stderr, "Usage: %s command [arg...]\n", argv[0]);
+//         return 1;
+//     }
+
+//     /* Check each directory in PATH for the command */
+//     while ((dir = strsep(&path_env, ":")) != NULL) {
+//         snprintf(path, MAX_PATH_LENGTH, "%s/%s", dir, argv[1]);
+//         if (stat(path, &statbuf) == 0) {  /* Check if file exists */
+//             if (S_ISREG(statbuf.st_mode) && (statbuf.st_mode & S_IXUSR)) {
+//                 /* File exists and is executable */
+//                 found = 1;
+//                 break;
+//             } else {
+//                 /* File exists but is not executable */
+//                 fprintf(stderr, "%s: %s: Permission denied\n", argv[0], path);
+//                 return 1;
+//             }
+//         }
+//     }
+
+//     /* Execute the command if found, otherwise print an error message */
+//     if (found) {
+//         execv(path, &argv[1]);
+//         fprintf(stderr, "%s: %s: Execution failed\n", argv[0], path);
+//         return 1;
+//     } else {
+//         fprintf(stderr, "%s: %s: Command not found\n", argv[0], argv[1]);
+//         return 1;
+//     }
+// }
