@@ -415,6 +415,7 @@ int wildCard(char**arr, int pos,int exCheck){
     }
 
 
+
     int k;    
     glob_t globbuf;
 
