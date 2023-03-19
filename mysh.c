@@ -11,13 +11,13 @@
 
 #define BUFF_SIZE 1024
 
-void batchMode(char *fName);
+void batchMode(char *);
 void interactiveMode();
-void introTag(int key);
-int execCommand(char *command);
-int redirection(char **arr, int flag, char *file);
-int wildCard(char **arr,int pos,int exCheck);
-
+void introTag(int);
+int piper(char **, char *);
+int execCommand(char *);
+int redirection(char **, int, char *);
+int wildCard(char **, int, int);
 
 int main(int argc, char *argv[])
 {
@@ -109,14 +109,13 @@ int execCommand(char *command)
     int aCount = 0;
     char *token = strtok(command, " \t\n");
     int flag = 0;
-    int pos=0;
-    // int pCheck =0; 
-    int wCard = 0; 
+    int pos = 0;
+    // int pCheck =0;
+    int wCard = 0;
 
     while (token != NULL)
     {
         // see if this works...not sure.
-
         if (token[0] == '>')
         {
             flag = 1;
@@ -137,7 +136,13 @@ int execCommand(char *command)
         if (strchr(token, '*') != NULL)
         { // wildcard
             wCard = 1;
-            pos=aCount; 
+            pos = aCount;
+        }
+
+        if (token[0] == '|')
+        {
+            token = strtok(NULL, " \t\n");
+            return piper(arr, token);
         }
 
         if (strcmp(token, "exit") == 0)
@@ -149,9 +154,8 @@ int execCommand(char *command)
         arr[aCount] = token;
         aCount++;
         token = strtok(NULL, " \t\n");
-
     }
-    int exCheck=0; 
+    int exCheck = 0;
     arr[aCount] = NULL; // for execvp
 
     //**********************************************************************************
@@ -159,73 +163,85 @@ int execCommand(char *command)
 
     // }
     //   */*.txt
-    //3.3 extension
-//strlen(arr[i])>2 && 
-    for(int i=0; i<aCount;i++){
+    // 3.3 extension
+    // strlen(arr[i])>2 &&
+
+    for (int i = 0; i < aCount; i++)
+    {
         // printf("i count : %d\n",i);
         // printf("a count : %d\n",aCount);
-        for(int k; k<strlen(arr[i]);k++){
+        for (int k; k < strlen(arr[i]); k++)
+        {
             // printf("k count : %d\n",k);
             // printf("strlen count : %ld\n",strlen(arr[i]));
-            if(strlen(arr[i])>2 && arr[i][k]=='*' && arr[i][k+1]=='/' && arr[i][k+2]=='*'){
-                exCheck=1;
-                return wildCard(arr,i,exCheck);
+            if (strlen(arr[i]) > 2 && arr[i][k] == '*' && arr[i][k + 1] == '/' && arr[i][k + 2] == '*')
+            {
+                exCheck = 1;
+                return wildCard(arr, i, exCheck);
             }
         }
     }
 
-    if(wCard!=0){
-    return wildCard(arr,pos,exCheck);
+    if (wCard != 0)
+    {
+        return wildCard(arr, pos, exCheck);
     }
 
-    if(arr[0][0] == '~' && (arr[0][1] == '\0' || arr[0][1] == '/')) {
-        //extention 3.2            : ~/
+    if (arr[0][0] == '~' && (arr[0][1] == '\0' || arr[0][1] == '/'))
+    {
+        // extention 3.2            : ~/
         char homePath[BUFF_SIZE];
-        const char* homeDirectory = getenv("HOME");
-        if (homeDirectory == NULL) {
-        fprintf(stderr, "Error: HOME environment variable not set\n");
-        return -1;
+        const char *homeDirectory = getenv("HOME");
+        if (homeDirectory == NULL)
+        {
+            fprintf(stderr, "Error: HOME environment variable not set\n");
+            return -1;
         }
         snprintf(homePath, BUFF_SIZE, "%s%s", homeDirectory, *arr + 1);
         int err = chdir(homePath);
-        if (err != 0) {
-        perror("chdir");
-        return 2;
+        if (err != 0)
+        {
+            perror("chdir");
+            return 2;
         }
         return 0;
     }
 
     if (strcmp(arr[0], "cd") == 0)
     {
-        if(arr[1]==NULL){
-            //extention 3.2
+        if (arr[1] == NULL)
+        {
+            // extention 3.2
             char homePath[BUFF_SIZE];
-            const char* homeDirectory = getenv("HOME");
-            if (homeDirectory == NULL) {
-            fprintf(stderr, "Error: HOME environment variable not set\n");
-            return -1;
+            const char *homeDirectory = getenv("HOME");
+            if (homeDirectory == NULL)
+            {
+                fprintf(stderr, "Error: HOME environment variable not set\n");
+                return -1;
             }
-
 
             strcpy(homePath, homeDirectory);
 
             int err = chdir(homePath);
-                if (err != 0) {
+            if (err != 0)
+            {
                 perror("chdir");
                 return 2;
-                }
+            }
             return 0;
-            //WORKING ON REMAINING>
+            // WORKING ON REMAINING>
         }
-        else if (arr[2] == NULL){
-            
+        else if (arr[2] == NULL)
+        {
+
             chdir(arr[1]);
 
             perror("chdir");
 
             return 0;
         }
-        else{
+        else
+        {
             printf("error too many cd args\n");
             return 1;
         }
@@ -299,6 +315,73 @@ int execCommand(char *command)
 
     return 1;
 }
+
+int piper(char **first, char *sub)
+{
+
+    int pipefd[2];
+    pid_t pid1, pid2;
+    int status;
+    char *second[BUFF_SIZE];
+    int aCount = 0;
+
+    while (sub != NULL)
+    {
+        second[aCount] = sub;
+        aCount++;
+        sub = strtok(NULL, " \t\n");
+    }
+
+    if (pipe(pipefd) == -1)
+    {
+        perror("pipe");
+        exit(1);
+    }
+
+    pid1 = fork();
+    if (pid1 == -1)
+    {
+        perror("fork");
+        exit(1);
+    }
+    else if (pid1 == 0)
+    {
+        // Child process 1
+        close(pipefd[0]);               // Close read end of pipe
+        dup2(pipefd[1], STDOUT_FILENO); // Set stdout to write end of pipe
+        execvp(first[0], first);        // Replace process image with command1
+        perror("exec command1");
+        exit(1);
+    }
+
+    pid2 = fork();
+    if (pid2 == -1)
+    {
+        perror("fork");
+        return 1;
+    }
+    else if (pid2 == 0)
+    {
+        // Child process 2
+        close(pipefd[1]);              // Close write end of pipe
+        dup2(pipefd[0], STDIN_FILENO); // Set stdin to read end of pipe
+        execvp(second[0], second);     // Replace process image with command2
+        perror("exec command2");
+        exit(1);
+    }
+
+    // Parent process
+    close(pipefd[0]); // Close read end of pipe in parent
+    close(pipefd[1]); // Close write end of pipe in parent
+    waitpid(pid1, &status, 0);
+    waitpid(pid2, &status, 0);
+    if (WIFEXITED(status))
+        return WEXITSTATUS(status);
+
+    else
+        return 1; // Error
+}
+
 int redirection(char **arr, int flag, char *file)
 {
     if (flag == 1)
@@ -389,43 +472,51 @@ int redirection(char **arr, int flag, char *file)
     return 1;
 }
 //**************************************************************************
-int wildCard(char**arr, int pos,int exCheck){
-    if(exCheck == 1){
-        //3.3 extension portion.
-    //need to double check this ...
+int wildCard(char **arr, int pos, int exCheck)
+{
+    if (exCheck == 1)
+    {
+        // 3.3 extension portion.
+        // need to double check this ...
         char *segments[256];
         int nsegments = 0;
         char *p = strtok(arr[pos], "/");
-        while (p != NULL) {
-        segments[nsegments++] = p;  // store each segment in the array and increment the count
-        p = strtok(NULL, "/");
+        while (p != NULL)
+        {
+            segments[nsegments++] = p; // store each segment in the array and increment the count
+            p = strtok(NULL, "/");
         }
-           char pattern[1024] = "";
-        for (int i = 0; i < nsegments; i++) {
-        if (strchr(segments[i], '*') != NULL) {
-            strcat(pattern, "/*");
-            strcat(pattern, segments[i]);
-            strcat(pattern, "*/");
-        } else {
-            strcat(pattern, "/");
-            strcat(pattern, segments[i]);
+        char pattern[1024] = "";
+        for (int i = 0; i < nsegments; i++)
+        {
+            if (strchr(segments[i], '*') != NULL)
+            {
+                strcat(pattern, "/*");
+                strcat(pattern, segments[i]);
+                strcat(pattern, "*/");
+            }
+            else
+            {
+                strcat(pattern, "/");
+                strcat(pattern, segments[i]);
             }
         }
-        strcat(pattern, "*"); 
+        strcat(pattern, "*");
     }
 
-
-    int k;    
+    int k;
     glob_t globbuf;
 
     int val = glob(arr[pos], GLOB_NOCHECK | GLOB_TILDE, NULL, &globbuf);
-        
-        if (val != 0) {
+
+    if (val != 0)
+    {
         printf("Error: glob() failed \n");
         return 1;
-        }
+    }
 
-    for(k=0;k < globbuf.gl_pathc; k++){
+    for (k = 0; k < globbuf.gl_pathc; k++)
+    {
         printf("%s\n", globbuf.gl_pathv[k]);
     }
     globfree(&globbuf);
