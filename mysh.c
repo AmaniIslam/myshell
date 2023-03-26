@@ -10,6 +10,7 @@
 // arbitrary value for the max command line characters
 
 #define BUFF_SIZE 1024
+#define _GNU_SOURCE
 
 void batchMode(char *);
 void interactiveMode();
@@ -47,7 +48,7 @@ int main(int argc, char *argv[])
 
     if (argc == 0 || argc > 2)
     {
-        printf("this one Error\n");
+        printf("Too many or too few arguments.\n");
         return EXIT_FAILURE;
     }
 
@@ -110,7 +111,8 @@ int execCommand(char *command)
     char *token = strtok(command, " \t\n");
     int flag = 0;
     int pos = 0;
-    // int pCheck =0;
+    int count1 =0;
+    int count2 = 0; 
     int wCard = 0;
 
     while (token != NULL)
@@ -118,20 +120,17 @@ int execCommand(char *command)
         // see if this works...not sure.
         if (token[0] == '>')
         {
+            count1++;
             flag = 1;
             break;
         }
 
         if (token[0] == '<')
         {
+            count2++;
             flag = 2;
             break;
         }
-
-        // if (strcmp(token, "|") == 0){
-        // pCheck=1;
-        // pos=aCount;
-        // }
 
         if (strchr(token, '*') != NULL)
         { // wildcard
@@ -158,6 +157,10 @@ int execCommand(char *command)
     int exCheck = 0;
     arr[aCount] = NULL; // for execvp
 
+    if( count1>1 || count2 >1 ){
+        //too many file redirections. 
+        exit(1);
+    }
     //**********************************************************************************
     // if(arr =='*' && arr [][] == '/'&&){
 
@@ -271,8 +274,14 @@ int execCommand(char *command)
             exit(1);
         }
     }
-    // if (arr[0][0] == '/')
-    // asprintf(&arr[0], "%s%s", ".", arr[0]);
+   if (arr[0][0] == '/')
+    {
+        char *new_str = malloc(strlen(arr[0]) + 2);
+        new_str[0] = '.';
+        strcpy(new_str + 1, arr[0]);
+        arr[0] = new_str;
+    }
+
 
     if (flag != 0)
     {
@@ -478,30 +487,31 @@ int wildCard(char **arr, int pos, int exCheck)
     {
         // 3.3 extension portion.
         // need to double check this ...
-        char *segments[256];
-        int nsegments = 0;
+        char *reserve[256];
+        int count = 0;
         char *p = strtok(arr[pos], "/");
         while (p != NULL)
         {
-            segments[nsegments++] = p; // store each segment in the array and increment the count
+            reserve[count++] = p; // store each segment in the array and increment the count
             p = strtok(NULL, "/");
         }
-        char pattern[1024] = "";
-        for (int i = 0; i < nsegments; i++)
+        char token[1024] = "";
+
+        for (int i = 0; i < count; i++)
         {
-            if (strchr(segments[i], '*') != NULL)
+            if (strchr(reserve[i], '*') != NULL)
             {
-                strcat(pattern, "/*");
-                strcat(pattern, segments[i]);
-                strcat(pattern, "*/");
+                strcat(token, "/*");
+                strcat(token, reserve[i]);
+                strcat(token, "*/");
             }
             else
             {
-                strcat(pattern, "/");
-                strcat(pattern, segments[i]);
+                strcat(token, "/");
+                strcat(token, reserve[i]);
             }
         }
-        strcat(pattern, "*");
+        strcat(token, "*");
     }
 
     int k;
