@@ -15,7 +15,7 @@
 void batchMode(char *);
 void interactiveMode();
 void introTag(int);
-int piper(char **, char *);
+int piper(char **, char **);
 int execCommand(char *);
 int redirection(char **, int, char *);
 int wildCard(char **, int, int);
@@ -24,8 +24,10 @@ int main(int argc, char *argv[])
 {
     int FD;
     int flag = 0;
+    int pos = 0;
     ssize_t nBytes;
     char buffer[BUFF_SIZE];
+    char line[BUFF_SIZE];
 
     if (argc == 2)
     {
@@ -56,39 +58,42 @@ int main(int argc, char *argv[])
     by newline characters, and executing each command as soon as
     it is complete.
     */
+
     while ((nBytes = read(FD, buffer, BUFF_SIZE)) > 0)
     {
-
-        if (buffer[nBytes - 1] == '\n')
-            buffer[nBytes - 1] = '\0';
-
-        // write(STDOUT_FILENO, buffer, nBytes);
-
-        /* parsing the input command string into separate
-        command tokens and then executing each
-        token as a separate command by calling the
-        */
-
-        char *sepToken = strtok(buffer, "\n");
-
-        while (sepToken != NULL)
+        for (int i = 0; i < nBytes; i++)
         {
-
-            flag = execCommand(sepToken);
-
-            if (argc == 1)
-                introTag(flag);
-
-            // exit in file it will terminate
-            if (strcmp(buffer, "exit") == 0)
+            if (buffer[i] == '\n')
             {
-                printf("Exiting!\n");
-                close(FD);
-                return 0;
+                line[pos] = '\0';
+                printf("%s\n", line);
+                execCommand(line);
+                pos = 0;
             }
-            sepToken = strtok(NULL, "\n");
+            else
+                line[pos++] = buffer[i];
         }
     }
+    // write(STDOUT_FILENO, buffer, nBytes);
+
+    /* parsing the input command string into separate
+    command tokens and then executing each
+    token as a separate command by calling the
+    */
+    /*
+            char *sepToken = strtok(buffer, "\n");
+
+            printf("tok: %s/\n", sepToken);
+
+            while (sepToken != NULL)
+            {
+                flag = execCommand(sepToken);
+
+                if (argc == 1)
+                    introTag(flag);
+
+                // exit in file it will terminate
+                */
 
     if (nBytes == -1)
     {
@@ -103,6 +108,7 @@ int main(int argc, char *argv[])
 //________________________________________________________________________________
 int execCommand(char *command)
 {
+    // printf("%s\n", command);
     char *arr[BUFF_SIZE];
     /*Initialize an array to hold the command arguments and a variable to keep
     track of the number of arguments:
@@ -114,6 +120,13 @@ int execCommand(char *command)
     int count1 =0;
     int count2 = 0; 
     int wCard = 0;
+
+    // int pipefd[2];
+    // pid_t pid1, pid2;
+    // int status;
+    char *sub[BUFF_SIZE];
+    int subCount = 0;
+    int subCom = 0;
 
     while (token != NULL)
     {
@@ -134,14 +147,21 @@ int execCommand(char *command)
 
         if (strchr(token, '*') != NULL)
         { // wildcard
-            wCard = 1;
             pos = aCount;
+            wCard = 1;
         }
 
         if (token[0] == '|')
         {
             token = strtok(NULL, " \t\n");
-            return piper(arr, token);
+            while (token != NULL)
+            {
+                sub[subCount] = token;
+                subCount++;
+                token = strtok(NULL, " \t\n");
+            }
+            subCom = 1;
+            return piper(arr, sub);
         }
 
         if (strcmp(token, "exit") == 0)
@@ -154,9 +174,9 @@ int execCommand(char *command)
         aCount++;
         token = strtok(NULL, " \t\n");
     }
-    int exCheck = 0;
     arr[aCount] = NULL; // for execvp
 
+<<<<<<< HEAD
     if( count1>1 || count2 >1 ){
         //too many file redirections. 
         exit(1);
@@ -169,26 +189,17 @@ int execCommand(char *command)
     // 3.3 extension
     // strlen(arr[i])>2 &&
 
+=======
+>>>>>>> 9d7518d944ec91c8c516d046c5689bb26afa443f
     for (int i = 0; i < aCount; i++)
-    {
-        // printf("i count : %d\n",i);
-        // printf("a count : %d\n",aCount);
         for (int k; k < strlen(arr[i]); k++)
         {
-            // printf("k count : %d\n",k);
-            // printf("strlen count : %ld\n",strlen(arr[i]));
             if (strlen(arr[i]) > 2 && arr[i][k] == '*' && arr[i][k + 1] == '/' && arr[i][k + 2] == '*')
-            {
-                exCheck = 1;
-                return wildCard(arr, i, exCheck);
-            }
+                return wildCard(arr, i, 1);
         }
-    }
 
     if (wCard != 0)
-    {
-        return wildCard(arr, pos, exCheck);
-    }
+        return wildCard(arr, pos, 0);
 
     if (arr[0][0] == '~' && (arr[0][1] == '\0' || arr[0][1] == '/'))
     {
@@ -274,14 +285,22 @@ int execCommand(char *command)
             exit(1);
         }
     }
+<<<<<<< HEAD
    if (arr[0][0] == '/')
+=======
+
+    if (arr[0][0] == '/')
+>>>>>>> 9d7518d944ec91c8c516d046c5689bb26afa443f
     {
         char *new_str = malloc(strlen(arr[0]) + 2);
         new_str[0] = '.';
         strcpy(new_str + 1, arr[0]);
         arr[0] = new_str;
     }
+<<<<<<< HEAD
 
+=======
+>>>>>>> 9d7518d944ec91c8c516d046c5689bb26afa443f
 
     if (flag != 0)
     {
@@ -319,27 +338,18 @@ int execCommand(char *command)
     else
     {
         perror("fork");
-        return -1;
+        return 1;
     }
 
     return 1;
 }
 
-int piper(char **first, char *sub)
+int piper(char **first, char **second)
 {
 
     int pipefd[2];
     pid_t pid1, pid2;
     int status;
-    char *second[BUFF_SIZE];
-    int aCount = 0;
-
-    while (sub != NULL)
-    {
-        second[aCount] = sub;
-        aCount++;
-        sub = strtok(NULL, " \t\n");
-    }
 
     if (pipe(pipefd) == -1)
     {
@@ -465,13 +475,13 @@ int redirection(char **arr, int flag, char *file)
         else
             waitpid(pid, &stat, 0);
 
-        return 0;
-
         if (close(fDir) == -1)
         {
             perror("close");
             return 1;
         }
+
+        return 0;
     }
     else
     {
