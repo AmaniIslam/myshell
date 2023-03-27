@@ -1,5 +1,34 @@
 # myshell
 
+Logic and Algorithm 
+
+main method: 
+First, program will figure what mode the user has chosen. 
+
+If program is in batch mode the program will open the file using the open() function and storing the file descriptor. Batch mode if there is 2 arguments including /mysh. 
+
+If the program has no arguments beside /mysh then it is interactive mode. Where the file descriptor will be assigned as STDIN_Fileno to read from standard input. 
+
+Anything else will return an error...
+
+Parsing algorithm - using a while loop 
+
+
+
+3.3 issue where it only works when the thing is not ran as the first command it lists everything in the thing
+
+TESTCASES
+pwd
+~/
+pwd
+
+The ">" symbol is used to redirect the output of a command to a file. For example, ls > file.txt will run the ls command and save its output to a file called "file.txt".
+output
+
+The "<" symbol is used to redirect input from a file to a command. For example, sort < file.txt will sort the contents of the "file.txt" file.
+input
+
+
 Define a function to parse user input into a list of command and argument strings. This function should handle whitespace and quoted arguments correctly.
 
 If mysh is called with an argument, open the specified file and read its contents into a list of command strings.

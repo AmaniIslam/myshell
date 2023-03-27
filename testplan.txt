@@ -1,0 +1,17 @@
+Working test cases 
+
+
+Redirections 
+echo foo bar > baz
+echo foo > baz bar
+echo > baz foo bar
+
+
+sort < foo > bar
+Does not work : 
+sort > bar < foo
+same output should result but instead emptyes document
+
+
+Wildcards 
+*/*.c semi works 

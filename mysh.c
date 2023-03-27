@@ -10,13 +10,12 @@
 // arbitrary value for the max command line characters
 
 #define BUFF_SIZE 1024
-#define _GNU_SOURCE
 
 void batchMode(char *);
 void interactiveMode();
 void introTag(int);
 int piper(char **, char **);
-int execCommand(char *);
+int execCommand(char *,int);
 int redirection(char **, int, char *);
 int wildCard(char **, int, int);
 
@@ -66,35 +65,17 @@ int main(int argc, char *argv[])
             if (buffer[i] == '\n')
             {
                 line[pos] = '\0';
-                printf("%s\n", line);
-                execCommand(line);
+
+                if(FD==STDIN_FILENO)
+                introTag(execCommand(line,FD));
+                else
+                execCommand(line,FD);
                 pos = 0;
             }
             else
                 line[pos++] = buffer[i];
         }
     }
-    // write(STDOUT_FILENO, buffer, nBytes);
-
-    /* parsing the input command string into separate
-    command tokens and then executing each
-    token as a separate command by calling the
-    */
-    /*
-            char *sepToken = strtok(buffer, "\n");
-
-            printf("tok: %s/\n", sepToken);
-
-            while (sepToken != NULL)
-            {
-                flag = execCommand(sepToken);
-
-                if (argc == 1)
-                    introTag(flag);
-
-                // exit in file it will terminate
-                */
-
     if (nBytes == -1)
     {
         perror("Error reading file");
@@ -106,7 +87,7 @@ int main(int argc, char *argv[])
     return 0;
 }
 //________________________________________________________________________________
-int execCommand(char *command)
+int execCommand(char *command, int mode)
 {
     // printf("%s\n", command);
     char *arr[BUFF_SIZE];
@@ -115,7 +96,7 @@ int execCommand(char *command)
     */
     int aCount = 0;
     char *token = strtok(command, " \t\n");
-    int flag = 0;
+    int flag = 0;   
     int pos = 0;
     int count1 =0;
     int count2 = 0; 
@@ -126,11 +107,12 @@ int execCommand(char *command)
     // int status;
     char *sub[BUFF_SIZE];
     int subCount = 0;
-    int subCom = 0;
+    // int subCom=0;
 
     while (token != NULL)
     {
         // see if this works...not sure.
+    //token[0] is the first character of every token in a command.Ex : echo foo > bar > bax token[0] = e f > 
         if (token[0] == '>')
         {
             count1++;
@@ -160,13 +142,15 @@ int execCommand(char *command)
                 subCount++;
                 token = strtok(NULL, " \t\n");
             }
-            subCom = 1;
+            // subCom = 1;
             return piper(arr, sub);
         }
 
         if (strcmp(token, "exit") == 0)
         {
+            if(mode == STDIN_FILENO)
             printf("Exiting!\n");
+
             exit(1);
         }
 
@@ -176,21 +160,13 @@ int execCommand(char *command)
     }
     arr[aCount] = NULL; // for execvp
 
-<<<<<<< HEAD
     if( count1>1 || count2 >1 ){
         //too many file redirections. 
-        exit(1);
+        printf("Error File redirection");
+        return 1;
     }
     //**********************************************************************************
-    // if(arr =='*' && arr [][] == '/'&&){
 
-    // }
-    //   */*.txt
-    // 3.3 extension
-    // strlen(arr[i])>2 &&
-
-=======
->>>>>>> 9d7518d944ec91c8c516d046c5689bb26afa443f
     for (int i = 0; i < aCount; i++)
         for (int k; k < strlen(arr[i]); k++)
         {
@@ -281,28 +257,20 @@ int execCommand(char *command)
         }
         else
         {
-            printf("error too many pwd args\n");
-            exit(1);
+            printf("Error Invalid Argument Entry \n");
+            return 1;
         }
     }
-<<<<<<< HEAD
-   if (arr[0][0] == '/')
-=======
 
     if (arr[0][0] == '/')
->>>>>>> 9d7518d944ec91c8c516d046c5689bb26afa443f
     {
         char *new_str = malloc(strlen(arr[0]) + 2);
         new_str[0] = '.';
         strcpy(new_str + 1, arr[0]);
         arr[0] = new_str;
     }
-<<<<<<< HEAD
 
-=======
->>>>>>> 9d7518d944ec91c8c516d046c5689bb26afa443f
-
-    if (flag != 0)
+    if (flag != 0)//file redirection
     {
         token = strtok(NULL, " \t\n");
         return redirection(arr, flag, token);
@@ -557,18 +525,6 @@ void introTag(int key)
     }
 }
 
-// int main(int argc, char *argv[]) {
-//     char *path_env = getenv("PATH");
-//     char path[MAX_PATH_LENGTH];
-//     char *dir;
-//     struct stat statbuf;
-//     int i, found = 0;
-
-//     if (argc < 2) {
-//         fprintf(stderr, "Usage: %s command [arg...]\n", argv[0]);
-//         return 1;
-//     }
-
 //     /* Check each directory in PATH for the command */
 //     while ((dir = strsep(&path_env, ":")) != NULL) {
 //         snprintf(path, MAX_PATH_LENGTH, "%s/%s", dir, argv[1]);
@@ -584,14 +540,3 @@ void introTag(int key)
 //             }
 //         }
 //     }
-
-//     /* Execute the command if found, otherwise print an error message */
-//     if (found) {
-//         execv(path, &argv[1]);
-//         fprintf(stderr, "%s: %s: Execution failed\n", argv[0], path);
-//         return 1;
-//     } else {
-//         fprintf(stderr, "%s: %s: Command not found\n", argv[0], argv[1]);
-//         return 1;
-//     }
-// }

@@ -1,2 +1,6 @@
 pwd
-mkdir total
+*/*.c
+pwd
+file*.c
+*/*.c
+pwd
