@@ -11,13 +11,14 @@
 
 #define BUFF_SIZE 1024
 
-void batchMode(char *);
-void interactiveMode();
+// void batchMode(char *);
+// void interactiveMode();
 void introTag(int);
 int re_pipe(char **, char **, char *, char *, char *);
 int execCommand(char *);
-int redirection(char **, int, char *);
+// int redirection(char **, int, char *);
 int wildCard(char **, int, int);
+int pwd_cd(char **);
 
 int main(int argc, char *argv[])
 {
@@ -123,19 +124,9 @@ int execCommand(char *command)
     char *subOutput = NULL;
     char *sub[BUFF_SIZE];
     int sCount = 0;
+    char *space[1];
+
     // int sCard = 0;
-
-    if (strcmp(token, "exit") == 0)
-    {
-        if (strtok(NULL, " \t\n")[0] == '|')
-            arr[0] = token;
-
-        else
-        {
-            printf("Exiting!\n");
-            exit(1);
-        }
-    }
 
     while (token != NULL)
     {
@@ -233,77 +224,6 @@ int execCommand(char *command)
         return 0;
     }
 
-    if (output != NULL || input != NULL || sub[0] != NULL)
-    {
-        // return redirection(arr, 2, input);
-        return re_pipe(arr, sub, output, input, subOutput);
-    }
-
-    if (strcmp(arr[0], "cd") == 0)
-    {
-        if (arr[1] == NULL)
-        {
-            // extention 3.2
-            char homePath[BUFF_SIZE];
-            const char *homeDirectory = getenv("HOME");
-            if (homeDirectory == NULL)
-            {
-                fprintf(stderr, "Error: HOME environment variable not set\n");
-                return -1;
-            }
-
-            strcpy(homePath, homeDirectory);
-
-            int err = chdir(homePath);
-            if (err != 0)
-            {
-                perror("chdir");
-                return 2;
-            }
-            return 0;
-            // WORKING ON REMAINING>
-        }
-        else if (arr[2] == NULL)
-        {
-
-            chdir(arr[1]);
-
-            perror("chdir");
-
-            return 0;
-        }
-        else
-        {
-            printf("error too many cd args\n");
-            return 1;
-        }
-    }
-
-    if (strcmp(arr[0], "pwd") == 0)
-    {
-        // pwd has no arguments thus 1 should be empty or NULL
-        if (arr[1] == NULL)
-        {
-
-            char cwd[1024];
-            if (getcwd(cwd, sizeof(cwd)) != NULL)
-            {
-                printf("%s\n", cwd);
-            }
-            else
-            {
-                perror("pwd");
-                return 1;
-            }
-            return 0;
-        }
-        else
-        {
-            printf("error too many pwd args\n");
-            return 1;
-        }
-    }
-
     if (arr[0][0] == '/')
     {
         char *new_str = malloc(strlen(arr[0]) + 2);
@@ -312,7 +232,63 @@ int execCommand(char *command)
         arr[0] = new_str;
     }
 
+    if (sub[0] != NULL && sub[0][0] == '/')
+    {
+        char *new_str = malloc(strlen(sub[0]) + 2);
+        new_str[0] = '.';
+        strcpy(new_str + 1, sub[0]);
+        sub[0] = new_str;
+    }
+
+    if (sub[0] != NULL)
+    {
+        if (strcmp(arr[0], "exit") == 0)
+        {
+            if ((strcmp(sub[0], "cd") == 0 || strcmp(sub[0], "pwd") == 0) && subOutput == NULL)
+                pwd_cd(sub);
+            else
+                re_pipe(sub, space, subOutput, input, subOutput);
+            exit(1);
+        }
+
+        if (sub[0] != NULL && strcmp(sub[0], "exit") == 0)
+        {
+            if (strcmp(arr[0], "cd") == 0 || (strcmp(arr[0], "pwd") == 0 && output == NULL))
+                pwd_cd(arr);
+            else
+                re_pipe(arr, space, output, input, subOutput);
+            exit(1);
+        }
+
+        if (strcmp(arr[0], "cd") == 0)
+        {
+            if (strcmp(sub[0], "cd") == 0 || (strcmp(sub[0], "pwd") == 0 && subOutput == NULL))
+                return pwd_cd(arr) + pwd_cd(sub);
+
+            return pwd_cd(arr) + re_pipe(sub, space, subOutput, input, subOutput);
+        }
+
+        if (strcmp(sub[0], "cd") == 0)
+        {
+            if (strcmp(arr[0], "pwd") == 0)
+                return pwd_cd(arr) + pwd_cd(sub);
+            return re_pipe(arr, space, output, input, subOutput) + pwd_cd(sub);
+        }
+
+        return re_pipe(arr, sub, output, input, subOutput);
+    }
+
+    if (strcmp(arr[0], "exit") == 0)
+        exit(1);
+
+    if (strcmp(arr[0], "cd") == 0 || (strcmp(arr[0], "pwd") == 0 && output == NULL))
+        return pwd_cd(arr);
+    // return redirection(arr, 2, input);
+    //        printf("test%d\n", strcmp(sub[0], "exit"));
+    return re_pipe(arr, sub, output, input, subOutput);
+
     //********************************************************************************
+    /*
     pid_t pid = fork(); // child process
 
     if (pid == 0)
@@ -326,26 +302,25 @@ int execCommand(char *command)
 
     else if (pid > 0)
     {
-        /*blocks the parent process until the child
-        process exits or is interrupted by a signal.*/
-        int cPoint;
-        waitpid(pid, &cPoint, 0);
-        /*If the child process exited normally, we return
-        its exit status using WEXITSTATUS().*/
-        if (WIFEXITED(cPoint))
-            return WEXITSTATUS(cPoint);
-
-        else
-            return -1;
-    }
+        //blocks the parent process until the child process exits or is interrupted by a signal.
+    int cPoint;
+    waitpid(pid, &cPoint, 0);
+    //If the child process exited normally, we return its exit status using WEXITSTATUS().
+    if (WIFEXITED(cPoint))
+        return WEXITSTATUS(cPoint);
 
     else
-    {
-        perror("fork");
-        return 1;
-    }
+        return -1;
+}
 
+else
+{
+    perror("fork");
     return 1;
+}
+
+return 1;
+*/
 }
 
 int re_pipe(char **first, char **second, char *output, char *input, char *subOutput)
@@ -371,6 +346,7 @@ int re_pipe(char **first, char **second, char *output, char *input, char *subOut
     else if (pid1 == 0)
     {
         // Child process 1
+
         if (output != NULL)
         {
             //>
@@ -391,6 +367,7 @@ int re_pipe(char **first, char **second, char *output, char *input, char *subOut
         if (input != NULL)
         {
             //<
+
             fDir = open(input, O_RDONLY);
             if (fDir == -1)
             {
@@ -406,6 +383,7 @@ int re_pipe(char **first, char **second, char *output, char *input, char *subOut
 
         if (second[0] != NULL)
         {
+
             // No redirection
             close(pipefd[0]); // Close read end of pipe
             if (dup2(pipefd[1], STDOUT_FILENO) == -1)
@@ -477,6 +455,7 @@ int re_pipe(char **first, char **second, char *output, char *input, char *subOut
     return 0;
 }
 
+/*
 int redirection(char **arr, int flag, char *file)
 {
     if (flag == 1)
@@ -566,6 +545,7 @@ int redirection(char **arr, int flag, char *file)
     }
     return 1;
 }
+*/
 //**************************************************************************
 int wildCard(char **arr, int pos, int exCheck)
 {
@@ -622,14 +602,73 @@ int wildCard(char **arr, int pos, int exCheck)
 void introTag(int key)
 {
     if (key != 0)
-    {
         write(STDOUT_FILENO, "!mysh> ", 7);
-    }
 
     else
-    {
         write(STDOUT_FILENO, "mysh> ", 6);
+}
+
+int pwd_cd(char **arr)
+{
+    if (strcmp(arr[0], "pwd") == 0)
+    {
+        // pwd has no arguments thus 1 should be empty or NULL
+        if (arr[1] == NULL)
+        {
+            char cwd[1024];
+            if (getcwd(cwd, sizeof(cwd)) == NULL)
+            {
+                perror("pwd");
+                return 1;
+            }
+
+            printf("%s\n", cwd);
+            return 0;
+        }
+
+        printf("error too many pwd args\n");
+        return 1;
     }
+
+    if (strcmp(arr[0], "cd") == 0)
+    {
+        if (arr[1] == NULL)
+        {
+            // extention 3.2
+            char homePath[BUFF_SIZE];
+            const char *homeDirectory = getenv("HOME");
+            if (homeDirectory == NULL)
+            {
+                fprintf(stderr, "Error: HOME environment variable not set\n");
+                return 1;
+            }
+
+            strcpy(homePath, homeDirectory);
+
+            if (chdir(homePath) != 0)
+            {
+                perror("chdir");
+                return 1;
+            }
+            return 0;
+            // WORKING ON REMAINING>
+        }
+        else if (arr[2] == NULL)
+        {
+            if (chdir(arr[1]) != 0)
+            {
+                perror("chdir");
+                return 1;
+            }
+
+            return 0;
+        }
+
+        printf("error too many cd args\n");
+        return 1;
+    }
+
+    return 0;
 }
 
 // int main(int argc, char *argv[]) {
