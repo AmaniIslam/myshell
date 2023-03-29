@@ -3,6 +3,7 @@
 Logic and Algorithm 
 
 main method: 
+
 First, program will figure what mode the user has chosen. 
 
 If program is in batch mode the program will open the file using the open() function and storing the file descriptor. Batch mode if there is 2 arguments including /mysh. 
@@ -11,8 +12,8 @@ If the program has no arguments beside /mysh then it is interactive mode. Where 
 
 Anything else will return an error...
 
-Parsing algorithm - using a while loop 
-
+Parsing algorithm - using one input while loop 
+Using the read() function will read and store the bytes that have been read in ssize_t nBytes. It will also take the buffer array which has been allocated a fix size 1024 bytes 
 
 
 3.3 issue where it only works when the thing is not ran as the first command it lists everything in the thing

@@ -15,9 +15,10 @@ void batchMode(char *);
 void interactiveMode();
 void introTag(int);
 int re_pipe(char **, char **, char *, char *, char *);
-int execCommand(char *);
+int execCommand(char *,int);
 int redirection(char **, int, char *);
-int wildCard(char **, int, int);
+// char** wildCard(char **, int, int,int);
+
 
 int main(int argc, char *argv[])
 {
@@ -66,9 +67,9 @@ int main(int argc, char *argv[])
             {
                 line[pos] = '\0';
                 if (argc == 2)
-                    execCommand(line);
+                    execCommand(line,argc);
                 if (argc == 1)
-                    introTag(execCommand(line));
+                    introTag(execCommand(line,argc));
                 pos = 0;
             }
             else
@@ -86,7 +87,7 @@ int main(int argc, char *argv[])
     return 0;
 }
 //________________________________________________________________________________
-int execCommand(char *command, int mode)
+int execCommand(char *command,int argc)
 {
     // printf("%s\n", command);
     char *arr[BUFF_SIZE];
@@ -106,9 +107,9 @@ int execCommand(char *command, int mode)
 
     if (strcmp(token, "exit") == 0)
     {
-        if (strtok(NULL, " \t\n")[0] == '|')
+        if (strtok(NULL, " \t\n")[0] == '|'){
             arr[0] = token;
-
+        }
         else
         {
             printf("Exiting!\n");
@@ -116,6 +117,7 @@ int execCommand(char *command, int mode)
         }
     }
 
+    
     while (token != NULL)
     {
         if (token[0] == '>')
@@ -138,7 +140,7 @@ int execCommand(char *command, int mode)
 
         if (strchr(token, '*') != NULL)
         { // wildcard
-            pos = aCount;
+            pos = aCount;//assigning the position to pos
             wCard = 1;
         }
 
@@ -175,25 +177,113 @@ int execCommand(char *command, int mode)
     }
     arr[aCount] = NULL; // for execvp
 
-    /*
-        for (int i = 0; i < aCount; i++)
-            printf("%s\n", arr[i]);
 
-        for (int i = 0; i < sCount; i++)
-            printf("%s\n", sub[i]);
-    */
-    for (int i = 0; i < aCount; i++)
-        for (int k; k < strlen(arr[i]); k++)
-        {
-            if (strlen(arr[i]) > 2 && arr[i][k] == '*' && arr[i][k + 1] == '/' && arr[i][k + 2] == '*')
-                return wildCard(arr, i, 1);
+    int wildPlus=0;
+    for (int i = 0; i < aCount; i++){
+        for (int k=0; k < strlen(arr[i]); k++){
+            
+            if (strlen(arr[i]) > 2 && arr[i][k] == '*' && arr[i][k + 1] == '/' && arr[i][k + 2] == '*'){
+            wildPlus =1;
+            wCard=1; 
+            }
+        }
+    }
+//wildcard
+    glob_t globbuf;
+
+    if (wCard != 0){
+        char *copyArr[BUFF_SIZE];
+        int dup = pos; 
+        for (int i = 0; i < aCount; i++){
+        copyArr[i] = (char*) malloc(strlen(arr[i]) + 1);
+            for (int k=0; k < strlen(arr[i]); k++){
+                copyArr[i][k]=arr[i][k];
+            }
+        copyArr[i][strlen(arr[i])] = '\0';
+
+        }
+                arr[aCount] = 0; 
+
+        if(wildPlus==1){
+            char *reserve[256];
+            int count = 0;
+            char *p = strtok(arr[pos], "/");
+            while (p != NULL){
+            reserve[count++] = p; // store each segment in the array and increment the count
+            p = strtok(NULL, "/");
+            }
+            char token[1024] = "";
+            int found_c_file = 0;
+
+
+            for (int i = 0; i < count; i++){
+            if (strchr(reserve[i], '*') != NULL){
+                strcat(token, "/*");
+                strcat(token, reserve[i]);
+                strcat(token, "*/");
+            }
+            else{
+                strcat(token, "/");
+                strcat(token, reserve[i]);
+            }
+            if (strstr(reserve[i], ".c") != NULL){
+            found_c_file = 1;
+            }
+        }
+        if (!found_c_file) 
+    
+        strcat(token, "/*.c");
+
+
+            strcat(token, "*");
         }
 
-    if (wCard != 0)
-        return wildCard(arr, pos, 0);
+    // char** newArr= wildCard(arr, pos, 0,aCount);
+        
+        int k;
+
+        int val = glob(arr[pos], GLOB_NOCHECK | GLOB_TILDE, NULL, &globbuf);
+        int count=0; 
+
+        if (val != 0){
+            printf("Error: glob() failed \n");
+            exit(1);
+        }
+        if(val == GLOB_NOMATCH){
+            arr[aCount] = NULL;
+            return 1; 
+        }
+        if(val==0){
+            for (k = 0; k < globbuf.gl_pathc; k++){
+            // printf("%s\n", globbuf.gl_pathv[k]);
+            arr[pos] = globbuf.gl_pathv[k];
+            pos++;      
+            count++;
+        } 
+        if(strcmp(arr[dup],copyArr[dup])==0){
+        printf("Error no match\n");
+        return 1; 
+            }
+        }
+    }
+    printf("File content: %s\n",arr[0]);
+    printf("File content: %s\n",arr[1]);
+    printf("File content: %s\n",arr[2]);
+    printf("File content: %s\n",arr[3]);
+    printf("File content: %s\n",arr[4]);
+    printf("File content: %s\n",arr[5]);
+    printf("File content: %s\n",arr[6]);
+    printf("File content: %s\n",arr[7]);
+    printf("File content: %s\n",arr[8]);
+    printf("File content: %s\n",arr[9]);
+
+
+
+
 
     if (arr[0][0] == '~' && (arr[0][1] == '\0' || arr[0][1] == '/'))
     {
+
         // extention 3.2            : ~/
         char homePath[BUFF_SIZE];
         const char *homeDirectory = getenv("HOME");
@@ -323,6 +413,9 @@ int execCommand(char *command, int mode)
         perror("fork");
         return 1;
     }
+
+    if(wCard!=0)
+    globfree(&globbuf); 
 
     return 1;
 }
@@ -546,58 +639,69 @@ int redirection(char **arr, int flag, char *file)
     return 1;
 }
 //**************************************************************************
-int wildCard(char **arr, int pos, int exCheck)
-{
-    if (exCheck == 1)
-    {
-        // 3.3 extension portion.
-        // need to double check this ...
-        char *reserve[256];
-        int count = 0;
-        char *p = strtok(arr[pos], "/");
-        while (p != NULL)
-        {
-            reserve[count++] = p; // store each segment in the array and increment the count
-            p = strtok(NULL, "/");
-        }
-        char token[1024] = "";
+// char** wildCard(char **arr, int pos, int exCheck,int aCount)
+// {
+//     if (exCheck == 1)
+//     {
+//         // 3.3 extension portion.
+//         // need to double check this ...
+//         char *reserve[256];
+//         int count = 0;
+//         char *p = strtok(arr[pos], "/");
+//         while (p != NULL)
+//         {
+//             reserve[count++] = p; // store each segment in the array and increment the count
+//             p = strtok(NULL, "/");
+//         }
+//         char token[1024] = "";
 
-        for (int i = 0; i < count; i++)
-        {
-            if (strchr(reserve[i], '*') != NULL)
-            {
-                strcat(token, "/*");
-                strcat(token, reserve[i]);
-                strcat(token, "*/");
-            }
-            else
-            {
-                strcat(token, "/");
-                strcat(token, reserve[i]);
-            }
-        }
-        strcat(token, "*");
-    }
+//         for (int i = 0; i < count; i++)
+//         {
+//             if (strchr(reserve[i], '*') != NULL)
+//             {
+//                 strcat(token, "/*");
+//                 strcat(token, reserve[i]);
+//                 strcat(token, "*/");
+//             }
+//             else
+//             {
+//                 strcat(token, "/");
+//                 strcat(token, reserve[i]);
+//             }
+//         }
+//         strcat(token, "*");
+//     }
 
-    int k;
-    glob_t globbuf;
+//     int k;
+//     glob_t globbuf;
 
-    int val = glob(arr[pos], GLOB_NOCHECK | GLOB_TILDE, NULL, &globbuf);
+//     int val = glob(arr[pos], GLOB_NOCHECK | GLOB_TILDE, NULL, &globbuf);
+//     int count=0; 
 
-    if (val != 0)
-    {
-        printf("Error: glob() failed \n");
-        return 1;
-    }
+//     if (val != 0){
+//         printf("Error: glob() failed \n");
+//         exit(1);
+//     }
+//     else if(val==0){
+        
+//         for (k = 0; k < globbuf.gl_pathc; k++){
+//         // printf("%s\n", globbuf.gl_pathv[k]);
+//         arr[pos] = globbuf.gl_pathv[k];
+//         // printf("arr pos val: %s\n",arr[pos]);
+//         pos++;
+//         count++;
+//         } 
 
-    for (k = 0; k < globbuf.gl_pathc; k++)
-    {
-        printf("%s\n", globbuf.gl_pathv[k]);
-    }
-    globfree(&globbuf);
+//         printf("\narr pos final val: %s\n",arr[pos]);
 
-    return 0;
-}
+//         globfree(&globbuf); 
+//     }
+//     else {//no match
+//         arr[aCount] = NULL;
+//     }
+
+//     return arr;
+// }
 //**************************************************************************
 void introTag(int key)
 {
