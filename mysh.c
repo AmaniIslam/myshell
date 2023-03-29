@@ -14,8 +14,8 @@
 void batchMode(char *);
 void interactiveMode();
 void introTag(int);
-int piper(char **, char **);
-int execCommand(char *,int);
+int re_pipe(char **, char **, char *, char *, char *);
+int execCommand(char *);
 int redirection(char **, int, char *);
 int wildCard(char **, int, int);
 
@@ -35,7 +35,7 @@ int main(int argc, char *argv[])
         if (FD == -1)
         { // means there is an error in File directory
             printf("Error opening file - %s\n", argv[1]);
-            exit(1);
+            return 1;
         }
     }
 
@@ -65,11 +65,10 @@ int main(int argc, char *argv[])
             if (buffer[i] == '\n')
             {
                 line[pos] = '\0';
-
-                if(FD==STDIN_FILENO)
-                introTag(execCommand(line,FD));
-                else
-                execCommand(line,FD);
+                if (argc == 2)
+                    execCommand(line);
+                if (argc == 1)
+                    introTag(execCommand(line));
                 pos = 0;
             }
             else
@@ -79,7 +78,7 @@ int main(int argc, char *argv[])
     if (nBytes == -1)
     {
         perror("Error reading file");
-        exit(1);
+        return 1;
     }
 
     close(FD);
@@ -96,35 +95,45 @@ int execCommand(char *command, int mode)
     */
     int aCount = 0;
     char *token = strtok(command, " \t\n");
-    int flag = 0;   
     int pos = 0;
-    int count1 =0;
-    int count2 = 0; 
     int wCard = 0;
-
-    // int pipefd[2];
-    // pid_t pid1, pid2;
-    // int status;
+    char *input = NULL;
+    char *output = NULL;
+    char *subOutput = NULL;
     char *sub[BUFF_SIZE];
-    int subCount = 0;
-    // int subCom=0;
+    int sCount = 0;
+    // int sCard = 0;
+
+    if (strcmp(token, "exit") == 0)
+    {
+        if (strtok(NULL, " \t\n")[0] == '|')
+            arr[0] = token;
+
+        else
+        {
+            printf("Exiting!\n");
+            exit(1);
+        }
+    }
 
     while (token != NULL)
     {
-        // see if this works...not sure.
-    //token[0] is the first character of every token in a command.Ex : echo foo > bar > bax token[0] = e f > 
         if (token[0] == '>')
         {
-            count1++;
-            flag = 1;
-            break;
+            if (output != NULL)
+                return 1;
+            output = strtok(NULL, " \t\n");
+            token = strtok(NULL, " \t\n");
+            continue;
         }
 
         if (token[0] == '<')
         {
-            count2++;
-            flag = 2;
-            break;
+            if (input != NULL)
+                return 1;
+            input = strtok(NULL, " \t\n");
+            token = strtok(NULL, " \t\n");
+            continue;
         }
 
         if (strchr(token, '*') != NULL)
@@ -138,20 +147,26 @@ int execCommand(char *command, int mode)
             token = strtok(NULL, " \t\n");
             while (token != NULL)
             {
-                sub[subCount] = token;
-                subCount++;
+
+                if (output != NULL || token[0] == '<')
+                    return 1;
+
+                if (token[0] == '>')
+                {
+                    if (subOutput != NULL)
+                        return 1;
+                    subOutput = strtok(NULL, " \t\n");
+                    token = strtok(NULL, " \t\n");
+                    continue;
+                }
+
+                sub[sCount] = token;
+                sCount++;
                 token = strtok(NULL, " \t\n");
             }
-            // subCom = 1;
-            return piper(arr, sub);
-        }
-
-        if (strcmp(token, "exit") == 0)
-        {
-            if(mode == STDIN_FILENO)
-            printf("Exiting!\n");
-
-            exit(1);
+            sub[sCount] = NULL;
+            // sCard = 1;
+            break;
         }
 
         arr[aCount] = token;
@@ -160,13 +175,13 @@ int execCommand(char *command, int mode)
     }
     arr[aCount] = NULL; // for execvp
 
-    if( count1>1 || count2 >1 ){
-        //too many file redirections. 
-        printf("Error File redirection");
-        return 1;
-    }
-    //**********************************************************************************
+    /*
+        for (int i = 0; i < aCount; i++)
+            printf("%s\n", arr[i]);
 
+        for (int i = 0; i < sCount; i++)
+            printf("%s\n", sub[i]);
+    */
     for (int i = 0; i < aCount; i++)
         for (int k; k < strlen(arr[i]); k++)
         {
@@ -195,6 +210,12 @@ int execCommand(char *command, int mode)
             return 2;
         }
         return 0;
+    }
+
+    if (output != NULL || input != NULL || sub[0] != NULL)
+    {
+        // return redirection(arr, 2, input);
+        return re_pipe(arr, sub, output, input, subOutput);
     }
 
     if (strcmp(arr[0], "cd") == 0)
@@ -251,7 +272,7 @@ int execCommand(char *command, int mode)
             else
             {
                 perror("pwd");
-                exit(1);
+                return 1;
             }
             return 0;
         }
@@ -270,12 +291,6 @@ int execCommand(char *command, int mode)
         arr[0] = new_str;
     }
 
-    if (flag != 0)//file redirection
-    {
-        token = strtok(NULL, " \t\n");
-        return redirection(arr, flag, token);
-    }
-
     //********************************************************************************
     pid_t pid = fork(); // child process
 
@@ -284,7 +299,7 @@ int execCommand(char *command, int mode)
         if (execvp(arr[0], arr) == -1)
         {
             perror("execvp");
-            exit(EXIT_FAILURE);
+            return 1;
         }
     }
 
@@ -312,61 +327,133 @@ int execCommand(char *command, int mode)
     return 1;
 }
 
-int piper(char **first, char **second)
+int re_pipe(char **first, char **second, char *output, char *input, char *subOutput)
 {
-
     int pipefd[2];
     pid_t pid1, pid2;
-    int status;
+    int fd;
+    int fDir;
+    int stat;
 
-    if (pipe(pipefd) == -1)
+    if (second[0] != NULL && pipe(pipefd) == -1)
     {
         perror("pipe");
-        exit(1);
+        return 1;
     }
 
     pid1 = fork();
     if (pid1 == -1)
     {
         perror("fork");
-        exit(1);
+        return 1;
     }
     else if (pid1 == 0)
     {
         // Child process 1
-        close(pipefd[0]);               // Close read end of pipe
-        dup2(pipefd[1], STDOUT_FILENO); // Set stdout to write end of pipe
-        execvp(first[0], first);        // Replace process image with command1
-        perror("exec command1");
-        exit(1);
+        if (output != NULL)
+        {
+            //>
+            fd = open(output, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP);
+            if (fd < 0)
+            {
+                perror("open");
+                return 1;
+            }
+
+            if (dup2(fd, STDOUT_FILENO) == -1)
+            {
+                perror("dup2");
+                return 1;
+            }
+        }
+
+        if (input != NULL)
+        {
+            //<
+            fDir = open(input, O_RDONLY);
+            if (fDir == -1)
+            {
+                perror("open");
+                return 1;
+            }
+            if (dup2(fDir, STDIN_FILENO) == -1)
+            {
+                perror("dup2");
+                return 1;
+            }
+        }
+
+        if (second[0] != NULL)
+        {
+            // No redirection
+            close(pipefd[0]); // Close read end of pipe
+            if (dup2(pipefd[1], STDOUT_FILENO) == -1)
+            {
+                perror("dup2");
+                return 1;
+            }
+        }
+
+        if (execvp(first[0], first) == -1)
+        {
+            perror("exec command1");
+            return 1;
+        }
     }
 
-    pid2 = fork();
-    if (pid2 == -1)
+    if (second[0] != NULL)
     {
-        perror("fork");
-        return 1;
-    }
-    else if (pid2 == 0)
-    {
-        // Child process 2
-        close(pipefd[1]);              // Close write end of pipe
-        dup2(pipefd[0], STDIN_FILENO); // Set stdin to read end of pipe
-        execvp(second[0], second);     // Replace process image with command2
-        perror("exec command2");
-        exit(1);
-    }
+        pid2 = fork();
+        if (pid2 == -1)
+        {
+            perror("fork");
+            return 1;
+        }
+        else if (pid2 == 0)
+        {
+            // Child process 2
+            if (subOutput != NULL)
+            {
+                fd = open(subOutput, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP);
+                if (fd < 0)
+                {
+                    perror("open");
+                    return 1;
+                }
+                if (dup2(fd, STDOUT_FILENO) == -1)
+                {
+                    perror("dup2");
+                    return 1;
+                }
+            }
+            // No redirection
+            close(pipefd[1]); // Close write end of pipe
+            if (dup2(pipefd[0], STDIN_FILENO) == -1)
+            {
+                perror("dup2");
+                return 1;
+            }
 
-    // Parent process
-    close(pipefd[0]); // Close read end of pipe in parent
-    close(pipefd[1]); // Close write end of pipe in parent
-    waitpid(pid1, &status, 0);
-    waitpid(pid2, &status, 0);
-    if (WIFEXITED(status))
-        return WEXITSTATUS(status);
+            if (execvp(second[0], second) == -1)
+            {
+                perror("exec command2");
+                return 1;
+            }
+
+            return 0;
+        }
+
+        // Parent process
+        close(pipefd[0]); // Close read end of pipe in parent
+        close(pipefd[1]); // Close write end of pipe in parent
+        waitpid(pid1, &stat, 0);
+        waitpid(pid2, &stat, 0);
+    }
 
     else
-        return 1; // Error
+        waitpid(pid1, &stat, 0);
+
+    return 0;
 }
 
 int redirection(char **arr, int flag, char *file)
@@ -398,7 +485,7 @@ int redirection(char **arr, int flag, char *file)
             execvp(arr[0], arr);
 
             perror("execvp");
-            return 1;
+            return 0;
         }
         else
             waitpid(pid, NULL, 0);
@@ -438,7 +525,7 @@ int redirection(char **arr, int flag, char *file)
             }
             execvp(arr[0], arr); // fix
             perror("exec");
-            return 1;
+            return 0;
         }
         else
             waitpid(pid, &stat, 0);
