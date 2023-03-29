@@ -1,7 +1,4 @@
 pwd
-*/*.c
-pwd
+cd .. 
 exit
-file*.c
-*/*.c
 pwd

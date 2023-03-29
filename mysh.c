@@ -15,17 +15,11 @@
 // void interactiveMode();
 void introTag(int);
 int re_pipe(char **, char **, char *, char *, char *);
-<<<<<<< HEAD
-int execCommand(char *,int);
+int execCommand(char *,int,int);
 int redirection(char **, int, char *);
 // char** wildCard(char **, int, int,int);
-
-=======
-int execCommand(char *);
-// int redirection(char **, int, char *);
-int wildCard(char **, int, int);
 int pwd_cd(char **);
->>>>>>> 6a8640b187d22fff87bb5a70861e4966f61c5a68
+
 
 int main(int argc, char *argv[])
 {
@@ -65,7 +59,7 @@ int main(int argc, char *argv[])
     by newline characters, and executing each command as soon as
     it is complete.
     */
-
+    
     while ((nBytes = read(FD, buffer, BUFF_SIZE)) > 0)
     {
         for (int i = 0; i < nBytes; i++)
@@ -74,9 +68,9 @@ int main(int argc, char *argv[])
             {
                 line[pos] = '\0';
                 if (argc == 2)
-                    execCommand(line,argc);
+                    execCommand(line,argc,FD);
                 if (argc == 1)
-                    introTag(execCommand(line,argc));
+                    introTag(execCommand(line,argc,FD));
                 pos = 0;
             }
             else
@@ -94,7 +88,7 @@ int main(int argc, char *argv[])
     return 0;
 }
 //________________________________________________________________________________
-int execCommand(char *command,int argc)
+int execCommand(char *command,int argc,int mode)
 {
     // printf("%s\n", command);
     char *arr[BUFF_SIZE];
@@ -110,25 +104,9 @@ int execCommand(char *command,int argc)
     char *subOutput = NULL;
     char *sub[BUFF_SIZE];
     int sCount = 0;
-<<<<<<< HEAD
-    // int sCard = 0;
-
-    if (strcmp(token, "exit") == 0)
-    {
-        if (strtok(NULL, " \t\n")[0] == '|'){
-            arr[0] = token;
-        }
-        else
-        {
-            printf("Exiting!\n");
-            exit(1);
-        }
-    }
-=======
     char *space[1];
 
     // int sCard = 0;
->>>>>>> 6a8640b187d22fff87bb5a70861e4966f61c5a68
 
     
     while (token != NULL)
@@ -191,12 +169,10 @@ int execCommand(char *command,int argc)
     arr[aCount] = NULL; // for execvp
 
 
-    int wildPlus=0;
     for (int i = 0; i < aCount; i++){
         for (int k=0; k < strlen(arr[i]); k++){
             
             if (strlen(arr[i]) > 2 && arr[i][k] == '*' && arr[i][k + 1] == '/' && arr[i][k + 2] == '*'){
-            wildPlus =1;
             wCard=1; 
             }
         }
@@ -216,43 +192,6 @@ int execCommand(char *command,int argc)
 
         }
                 arr[aCount] = 0; 
-
-        if(wildPlus==1){
-            char *reserve[256];
-            int count = 0;
-            char *p = strtok(arr[pos], "/");
-            while (p != NULL){
-            reserve[count++] = p; // store each segment in the array and increment the count
-            p = strtok(NULL, "/");
-            }
-            char token[1024] = "";
-            int found_c_file = 0;
-
-
-            for (int i = 0; i < count; i++){
-            if (strchr(reserve[i], '*') != NULL){
-                strcat(token, "/*");
-                strcat(token, reserve[i]);
-                strcat(token, "*/");
-            }
-            else{
-                strcat(token, "/");
-                strcat(token, reserve[i]);
-            }
-            if (strstr(reserve[i], ".c") != NULL){
-            found_c_file = 1;
-            }
-        }
-        if (!found_c_file) 
-    
-        strcat(token, "/*.c");
-
-
-            strcat(token, "*");
-        }
-
-    // char** newArr= wildCard(arr, pos, 0,aCount);
-        
         int k;
 
         int val = glob(arr[pos], GLOB_NOCHECK | GLOB_TILDE, NULL, &globbuf);
@@ -275,24 +214,27 @@ int execCommand(char *command,int argc)
         } 
         if(strcmp(arr[dup],copyArr[dup])==0){
         printf("Error no match\n");
+        for (int i = 0; i < aCount; i++) {
+        free(copyArr[i]);
+        }
+        globfree(&globbuf); 
         return 1; 
             }
+        for (int i = 0; i < aCount; i++) {
+        free(copyArr[i]);
+        }
         }
     }
-    printf("File content: %s\n",arr[0]);
-    printf("File content: %s\n",arr[1]);
-    printf("File content: %s\n",arr[2]);
-    printf("File content: %s\n",arr[3]);
-    printf("File content: %s\n",arr[4]);
-    printf("File content: %s\n",arr[5]);
-    printf("File content: %s\n",arr[6]);
-    printf("File content: %s\n",arr[7]);
-    printf("File content: %s\n",arr[8]);
-    printf("File content: %s\n",arr[9]);
-
-
-
-
+    // printf("File content: %s\n",arr[0]);
+    // printf("File content: %s\n",arr[1]);
+    // printf("File content: %s\n",arr[2]);
+    // printf("File content: %s\n",arr[3]);
+    // printf("File content: %s\n",arr[4]);
+    // printf("File content: %s\n",arr[5]);
+    // printf("File content: %s\n",arr[6]);
+    // printf("File content: %s\n",arr[7]);
+    // printf("File content: %s\n",arr[8]);
+    // printf("File content: %s\n",arr[9]);
 
     if (arr[0][0] == '~' && (arr[0][1] == '\0' || arr[0][1] == '/'))
     {
@@ -321,6 +263,7 @@ int execCommand(char *command,int argc)
         new_str[0] = '.';
         strcpy(new_str + 1, arr[0]);
         arr[0] = new_str;
+        //may need to be freed
     }
 
     if (sub[0] != NULL && sub[0][0] == '/')
@@ -328,7 +271,7 @@ int execCommand(char *command,int argc)
         char *new_str = malloc(strlen(sub[0]) + 2);
         new_str[0] = '.';
         strcpy(new_str + 1, sub[0]);
-        sub[0] = new_str;
+        sub[0] = new_str;   
     }
 
     if (sub[0] != NULL)
@@ -361,26 +304,27 @@ int execCommand(char *command,int argc)
 
         if (strcmp(sub[0], "cd") == 0)
         {
-<<<<<<< HEAD
-            printf("Error Invalid Argument Entry \n");
-            return 1;
-=======
             if (strcmp(arr[0], "pwd") == 0)
                 return pwd_cd(arr) + pwd_cd(sub);
             return re_pipe(arr, space, output, input, subOutput) + pwd_cd(sub);
->>>>>>> 6a8640b187d22fff87bb5a70861e4966f61c5a68
         }
 
         return re_pipe(arr, sub, output, input, subOutput);
     }
 
-    if (strcmp(arr[0], "exit") == 0)
+    if (strcmp(arr[0], "exit") == 0){//check this for works everytime make sure
+        if(mode == STDIN_FILENO){
+            printf("Exiting!\n");
+        }
         exit(1);
+    }
 
     if (strcmp(arr[0], "cd") == 0 || (strcmp(arr[0], "pwd") == 0 && output == NULL))
         return pwd_cd(arr);
     // return redirection(arr, 2, input);
     //        printf("test%d\n", strcmp(sub[0], "exit"));
+    if(wCard!=0)
+    globfree(&globbuf); 
     return re_pipe(arr, sub, output, input, subOutput);
 
     //********************************************************************************
@@ -409,20 +353,15 @@ int execCommand(char *command,int argc)
         return -1;
 }
 
-<<<<<<< HEAD
-    if(wCard!=0)
-    globfree(&globbuf); 
-
-=======
 else
 {
     perror("fork");
->>>>>>> 6a8640b187d22fff87bb5a70861e4966f61c5a68
     return 1;
 }
 
 return 1;
 */
+
 }
 
 int re_pipe(char **first, char **second, char *output, char *input, char *subOutput)
@@ -784,19 +723,3 @@ int pwd_cd(char **arr)
 
     return 0;
 }
-
-//     /* Check each directory in PATH for the command */
-//     while ((dir = strsep(&path_env, ":")) != NULL) {
-//         snprintf(path, MAX_PATH_LENGTH, "%s/%s", dir, argv[1]);
-//         if (stat(path, &statbuf) == 0) {  /* Check if file exists */
-//             if (S_ISREG(statbuf.st_mode) && (statbuf.st_mode & S_IXUSR)) {
-//                 /* File exists and is executable */
-//                 found = 1;
-//                 break;
-//             } else {
-//                 /* File exists but is not executable */
-//                 fprintf(stderr, "%s: %s: Permission denied\n", argv[0], path);
-//                 return 1;
-//             }
-//         }
-//     }
