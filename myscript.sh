@@ -1,4 +1,6 @@
 pwd
+cd ..
 cd .. 
-exit
 pwd
+cd Pa2
+exit

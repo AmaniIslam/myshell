@@ -15,7 +15,7 @@
 // void interactiveMode();
 void introTag(int);
 int re_pipe(char **, char **, char *, char *, char *);
-int execCommand(char *,int,int);
+int execCommand(char *,int);
 int redirection(char **, int, char *);
 // char** wildCard(char **, int, int,int);
 int pwd_cd(char **);
@@ -68,9 +68,9 @@ int main(int argc, char *argv[])
             {
                 line[pos] = '\0';
                 if (argc == 2)
-                    execCommand(line,argc,FD);
+                    execCommand(line,FD);
                 if (argc == 1)
-                    introTag(execCommand(line,argc,FD));
+                    introTag(execCommand(line,FD));
                 pos = 0;
             }
             else
@@ -88,9 +88,10 @@ int main(int argc, char *argv[])
     return 0;
 }
 //________________________________________________________________________________
-int execCommand(char *command,int argc,int mode)
+int execCommand(char *command,int mode)
 {
     // printf("%s\n", command);
+    int returnVal=0; 
     char *arr[BUFF_SIZE];
     /*Initialize an array to hold the command arguments and a variable to keep
     track of the number of arguments:
@@ -191,7 +192,7 @@ int execCommand(char *command,int argc,int mode)
         copyArr[i][strlen(arr[i])] = '\0';
 
         }
-                arr[aCount] = 0; 
+            arr[aCount] = 0; 
         int k;
 
         int val = glob(arr[pos], GLOB_NOCHECK | GLOB_TILDE, NULL, &globbuf);
@@ -225,16 +226,6 @@ int execCommand(char *command,int argc,int mode)
         }
         }
     }
-    // printf("File content: %s\n",arr[0]);
-    // printf("File content: %s\n",arr[1]);
-    // printf("File content: %s\n",arr[2]);
-    // printf("File content: %s\n",arr[3]);
-    // printf("File content: %s\n",arr[4]);
-    // printf("File content: %s\n",arr[5]);
-    // printf("File content: %s\n",arr[6]);
-    // printf("File content: %s\n",arr[7]);
-    // printf("File content: %s\n",arr[8]);
-    // printf("File content: %s\n",arr[9]);
 
     if (arr[0][0] == '~' && (arr[0][1] == '\0' || arr[0][1] == '/'))
     {
@@ -296,20 +287,37 @@ int execCommand(char *command,int argc,int mode)
 
         if (strcmp(arr[0], "cd") == 0)
         {
-            if (strcmp(sub[0], "cd") == 0 || (strcmp(sub[0], "pwd") == 0 && subOutput == NULL))
-                return pwd_cd(arr) + pwd_cd(sub);
-
-            return pwd_cd(arr) + re_pipe(sub, space, subOutput, input, subOutput);
+            if (strcmp(sub[0], "cd") == 0 || (strcmp(sub[0], "pwd") == 0 && subOutput == NULL)){
+                returnVal= pwd_cd(arr) + pwd_cd(sub);
+                if(wCard!=0)
+                globfree(&globbuf);
+                return returnVal;
+                }
+            returnVal= pwd_cd(arr) + re_pipe(sub, space, subOutput, input, subOutput);
+            if(wCard!=0){
+            globfree(&globbuf);}
+            return returnVal;
         }
 
         if (strcmp(sub[0], "cd") == 0)
         {
-            if (strcmp(arr[0], "pwd") == 0)
-                return pwd_cd(arr) + pwd_cd(sub);
-            return re_pipe(arr, space, output, input, subOutput) + pwd_cd(sub);
+            if (strcmp(arr[0], "pwd") == 0){
+                returnVal= pwd_cd(arr) + pwd_cd(sub);
+                if(wCard!=0){
+                globfree(&globbuf);}
+                return returnVal;
+            }
+
+            returnVal = re_pipe(arr, space, output, input, subOutput) + pwd_cd(sub);
+            if(wCard!=0){
+            globfree(&globbuf);}
+            return returnVal;
         }
 
-        return re_pipe(arr, sub, output, input, subOutput);
+        returnVal = re_pipe(arr, sub, output, input, subOutput);
+        if(wCard!=0){
+        globfree(&globbuf);}
+        return returnVal;
     }
 
     if (strcmp(arr[0], "exit") == 0){//check this for works everytime make sure
@@ -319,13 +327,19 @@ int execCommand(char *command,int argc,int mode)
         exit(1);
     }
 
-    if (strcmp(arr[0], "cd") == 0 || (strcmp(arr[0], "pwd") == 0 && output == NULL))
-        return pwd_cd(arr);
+    if (strcmp(arr[0], "cd") == 0 || (strcmp(arr[0], "pwd") == 0 && output == NULL)){
+        returnVal= pwd_cd(arr);
+        if(wCard!=0){
+        globfree(&globbuf);}
+        return returnVal;
+    }
     // return redirection(arr, 2, input);
     //        printf("test%d\n", strcmp(sub[0], "exit"));
-    if(wCard!=0)
-    globfree(&globbuf); 
-    return re_pipe(arr, sub, output, input, subOutput);
+    
+    returnVal = re_pipe(arr, sub, output, input, subOutput);
+    if(wCard!=0){
+    globfree(&globbuf);}
+    return returnVal;
 
     //********************************************************************************
     /*
@@ -716,7 +730,7 @@ int pwd_cd(char **arr)
 
             return 0;
         }
-
+    
         printf("error too many cd args\n");
         return 1;
     }
