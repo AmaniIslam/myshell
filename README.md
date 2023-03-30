@@ -25,14 +25,28 @@ Checking if
 
 Once arr is populated and once we exit the while loop we will set the last index arr[aCount] = NULL for execvp function.  
 
-Moving on to wildcards...using the flag created earlier. We first duplicated arr and populated all its values into copyArr for later use. Using glob.h and glob. Start by creating a global variable to hold the result of glob() - glob_t globbuf. Next use glob function to retrieve a return value of val when you pass the arr position where wildcard occurs, and some error checks, and &globbuf. Val will return a 0 if glob() has ran successfully. Using a for loop we will traverse through each match globbuf.gl_pathc will ensure that the while loop only executes for the number of matches found. Once they are found we will feed those values into arr[pos]. 
-If there is no match we will simply exit the program. Also globfree(&globbuf) will be needed to 
+Moving on to wildcards...using the flag created earlier. We first duplicated arr and populated all its values into copyArr for later use. Using glob.h and glob. Start by creating a global variable to hold the result of glob() - glob_t globbuf. Next use glob function to retrieve a return value of val when you pass the arr position where wildcard occurs, and some error checks, and &globbuf. Val will return a 0 if glob() has ran successfully. Using a for loop we will traverse through each match globbuf.gl_pathc will ensure that the while loop only executes for the number of matches found. Once they are found we will feed those values into arr[pos]. If there is no match we will simply exit the program. Also globfree(&globbuf) will be needed to deallocate memory.
+AMANI WILL EXPLAIN EVERYTHING AFTER this point.
 
+pwd_cd() - handles built in functions pwd cd - 
+
+pwd : will check the first index to see if its equal to the string "pwd". Considering it does we have an error handle to make sure that the pwd has no additional arguments by checking to make sure arr[1]=NULL. Next, we will create an array and use getcwd() to retrieve current working directory and store it in the cwd character array. Finally will print the path. 
+
+cd : 
+if one argument passed we will use chdir[arr[1] to change the directory to the intended one. 
+3.2 Extension part - Very similar to the extension refer to that explanation. Only difference is that we will use strcpy to copy the homeDirecter to homepath. And then we will change directory to homepath.  
+
+
+introTag() - will be called only in interactive to print mysh> and will print !mysh> for an error statement. 
+
+re_pipe() - Combination of redirection and pipe. This function takes in several arguments first and second arrays, output char pointer, char input pointer, and char subOutput pointer. First we will initialize the file descripters for pipes in an array of two indicies. First, we'll check to see if there is a second command to execute and then create a pipe between two commands. Next we will fork the first child process and if pid1==0 we will enter into the first child process. We redirect standard output to the output file if it has been described. Open the file for 0_WRONLY. Then ...   
 
 EXTENSIONS:
-3.2
-3.3 Directory WildCards
+3.2 - Home Directory - Part 1: -First will check for the occurance of ~/ as a token. Create a homepath arr- homepath[BUFF_SIZE]. Then create a homeDirectory pointer that retrieves the value of HOME Environmental Variabl using getenvfunction. Then snprintf will concatenate the homedirectory path with the second arg in arr*. Finally chdir will change to the newly formed path.
+Part 2 : cd  with no arguments refer above. 
 
+3.3 Directory WildCards
+Our implementation for wildcards cohesively and collaterly works with directory wildcards as well. We will check for the occurance of */*.c and will set a flag and will proceed into wildcard algorithm. 
 
 
 TESTCASES

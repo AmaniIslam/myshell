@@ -10,14 +10,10 @@
 // arbitrary value for the max command line characters
 
 #define BUFF_SIZE 1024
-
-// void batchMode(char *);
-// void interactiveMode();
 void introTag(int);
 int re_pipe(char **, char **, char *, char *, char *);
 int execCommand(char *,int);
 int redirection(char **, int, char *);
-// char** wildCard(char **, int, int,int);
 int pwd_cd(char **);
 
 
@@ -247,18 +243,20 @@ int execCommand(char *command,int mode)
         }
         return 0;
     }
-
+    int path=0;
     if (arr[0][0] == '/')
     {
+        path=1;
         char *new_str = malloc(strlen(arr[0]) + 2);
         new_str[0] = '.';
         strcpy(new_str + 1, arr[0]);
         arr[0] = new_str;
         //may need to be freed
     }
-
+    // int sPath=0;
     if (sub[0] != NULL && sub[0][0] == '/')
     {
+        // sPath=1;
         char *new_str = malloc(strlen(sub[0]) + 2);
         new_str[0] = '.';
         strcpy(new_str + 1, sub[0]);
@@ -333,48 +331,15 @@ int execCommand(char *command,int mode)
         globfree(&globbuf);}
         return returnVal;
     }
-    // return redirection(arr, 2, input);
-    //        printf("test%d\n", strcmp(sub[0], "exit"));
-    
+
+    printf("%s\n",arr[0]);
+
     returnVal = re_pipe(arr, sub, output, input, subOutput);
     if(wCard!=0){
     globfree(&globbuf);}
+    if(path)
+    free(arr[0]);
     return returnVal;
-
-    //********************************************************************************
-    /*
-    pid_t pid = fork(); // child process
-
-    if (pid == 0)
-    {
-        if (execvp(arr[0], arr) == -1)
-        {
-            perror("execvp");
-            return 1;
-        }
-    }
-
-    else if (pid > 0)
-    {
-        //blocks the parent process until the child process exits or is interrupted by a signal.
-    int cPoint;
-    waitpid(pid, &cPoint, 0);
-    //If the child process exited normally, we return its exit status using WEXITSTATUS().
-    if (WIFEXITED(cPoint))
-        return WEXITSTATUS(cPoint);
-
-    else
-        return -1;
-}
-
-else
-{
-    perror("fork");
-    return 1;
-}
-
-return 1;
-*/
 
 }
 
@@ -503,169 +468,12 @@ int re_pipe(char **first, char **second, char *output, char *input, char *subOut
         waitpid(pid1, &stat, 0);
         waitpid(pid2, &stat, 0);
     }
-
     else
         waitpid(pid1, &stat, 0);
 
     return 0;
 }
 
-/*
-int redirection(char **arr, int flag, char *file)
-{
-    if (flag == 1)
-    {
-        //>
-        pid_t pid;
-        // check first parameter
-        int fd = open(file, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP);
-        if (fd < 0)
-        {
-            perror("open");
-            return 1;
-        }
-        pid = fork();
-        if (pid == -1)
-        {
-            perror("fork");
-            return 1;
-        }
-        else if (pid == 0)
-        {
-            if (dup2(fd, STDOUT_FILENO) == -1)
-            {
-                perror("dup2");
-                return 1;
-            }
-            execvp(arr[0], arr);
-
-            perror("execvp");
-            return 0;
-        }
-        else
-            waitpid(pid, NULL, 0);
-
-        return 0;
-
-        if (close(fd) == -1)
-        {
-            perror("close");
-            return 1;
-        }
-    }
-    else if (flag == 2)
-    {
-        //<
-        int stat;
-        pid_t pid;
-        int fDir = open(file, O_RDONLY);
-        if (fDir == -1)
-        {
-            perror("open");
-            return 1;
-        }
-
-        pid = fork();
-        if (pid == -1)
-        {
-            perror("fork");
-            return 1;
-        }
-        else if (pid == 0)
-        { // child
-            if (dup2(fDir, STDIN_FILENO) == -1)
-            {
-                perror("dup2");
-                return 1;
-            }
-            execvp(arr[0], arr); // fix
-            perror("exec");
-            return 0;
-        }
-        else
-            waitpid(pid, &stat, 0);
-
-        if (close(fDir) == -1)
-        {
-            perror("close");
-            return 1;
-        }
-
-        return 0;
-    }
-    else
-    {
-        printf("Error");
-        return 1;
-    }
-    return 1;
-}
-*/
-//**************************************************************************
-// char** wildCard(char **arr, int pos, int exCheck,int aCount)
-// {
-//     if (exCheck == 1)
-//     {
-//         // 3.3 extension portion.
-//         // need to double check this ...
-//         char *reserve[256];
-//         int count = 0;
-//         char *p = strtok(arr[pos], "/");
-//         while (p != NULL)
-//         {
-//             reserve[count++] = p; // store each segment in the array and increment the count
-//             p = strtok(NULL, "/");
-//         }
-//         char token[1024] = "";
-
-//         for (int i = 0; i < count; i++)
-//         {
-//             if (strchr(reserve[i], '*') != NULL)
-//             {
-//                 strcat(token, "/*");
-//                 strcat(token, reserve[i]);
-//                 strcat(token, "*/");
-//             }
-//             else
-//             {
-//                 strcat(token, "/");
-//                 strcat(token, reserve[i]);
-//             }
-//         }
-//         strcat(token, "*");
-//     }
-
-//     int k;
-//     glob_t globbuf;
-
-//     int val = glob(arr[pos], GLOB_NOCHECK | GLOB_TILDE, NULL, &globbuf);
-//     int count=0; 
-
-//     if (val != 0){
-//         printf("Error: glob() failed \n");
-//         exit(1);
-//     }
-//     else if(val==0){
-        
-//         for (k = 0; k < globbuf.gl_pathc; k++){
-//         // printf("%s\n", globbuf.gl_pathv[k]);
-//         arr[pos] = globbuf.gl_pathv[k];
-//         // printf("arr pos val: %s\n",arr[pos]);
-//         pos++;
-//         count++;
-//         } 
-
-//         printf("\narr pos final val: %s\n",arr[pos]);
-
-//         globfree(&globbuf); 
-//     }
-//     else {//no match
-//         arr[aCount] = NULL;
-//     }
-
-//     return arr;
-// }
-//**************************************************************************
 void introTag(int key)
 {
     if (key != 0)
