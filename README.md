@@ -39,54 +39,17 @@ if one argument passed we will use chdir[arr[1] to change the directory to the i
 
 introTag() - will be called only in interactive to print mysh> and will print !mysh> for an error statement. 
 
-re_pipe() - Combination of redirection and pipe. This function takes in several arguments first and second arrays, output char pointer, char input pointer, and char subOutput pointer. First we will initialize the file descripters for pipes in an array of two indicies. First, we'll check to see if there is a second command to execute and then create a pipe between two commands. Next we will fork the first child process and if pid1==0 we will enter into the first child process. We redirect standard output to the output file if it has been described. Open the file for 0_WRONLY. Then ...   
+re_pipe() - Combination of redirection and pipe. This function takes in several arguments: the arrays of the first and second commands and possible output, input, and subcommand output redirect files. First we will initialize the file descripters for pipes or redirect in an array of two indicies.
+    - For Redirect: First, we create a child process. We will open the file corresponding to whether it is output or input. We will also duplicate the corresponding file descriptor to STDOUT or STDIN. Finally, we execute the command using execvp.
+    - For Pipe: First, we'll check to see if there is a second command to execute and then create a pipe between two commands. We will execute the necessary processes for the first command, then create another child process for the subcommand. We will repeat steps for output if necessary and then execute the subcommand.
 
 EXTENSIONS:
 3.2 - Home Directory - Part 1: -First will check for the occurance of ~/ as a token. Create a homepath arr- homepath[BUFF_SIZE]. Then create a homeDirectory pointer that retrieves the value of HOME Environmental Variabl using getenvfunction. Then snprintf will concatenate the homedirectory path with the second arg in arr*. Finally chdir will change to the newly formed path.
 Part 2 : cd  with no arguments refer above. 
 
 3.3 Directory WildCards
-Our implementation for wildcards cohesively and collaterly works with directory wildcards as well. We will check for the occurance of */*.c and will set a flag and will proceed into wildcard algorithm. 
+Our implementation for wildcards cohesively and collaterly works with directory wildcards as well. We will check for the occurance of */*.c and will set a flag and will proceed into wildcard algorithm.
 
+ERROR: Every possible command will execute perfectly if it is the first command after running mysh. Once a command involving pipes is executed, the commands after it do not execute properly due to a complication involving parent and child processes.
 
-TESTCASES
-pwd
-~/
-pwd
-
-The ">" symbol is used to redirect the output of a command to a file. For example, ls > file.txt will run the ls command and save its output to a file called "file.txt".
-output
-
-The "<" symbol is used to redirect input from a file to a command. For example, sort < file.txt will sort the contents of the "file.txt" file.
-input
-
-
-Define a function to parse user input into a list of command and argument strings. This function should handle whitespace and quoted arguments correctly.
-
-If mysh is called with an argument, open the specified file and read its contents into a list of command strings.
-
-If mysh is not called with an argument, enter an input loop that prompts the user for input and calls the command parsing function on each line of input.
-
-For each command string, execute it by calling the appropriate system function (e.g., os.system()) with the command and argument strings as arguments.
-
-If a command is "exit", terminate mysh and return control to the calling program.
-
-
-
-
-
-
-
-
-
-Parse the command line to identify any file redirections. For example, if the command is ls > output.txt, the redirection operator > indicates that the output of the ls command should be written to the file output.txt.
-
-Use the open() system call to open the specified file. In the example above, the shell would call open("output.txt", O_WRONLY | O_CREAT | O_TRUNC, 0666) to open output.txt for writing. This would create the file if it doesn't already exist, truncate it to zero length if it does exist, and set its permissions to 0666.
-
-Use dup2() to redirect the standard output of the child process to the file descriptor returned by open(). In the example above, the shell would call dup2(file_descriptor, STDOUT_FILENO) to redirect the standard output of the child process to the output.txt file.
-
-Execute the command in the child process using execvp() or a similar function.
-
-The child process will now write its output to the file specified in the redirection operator.
-
-The same approach can be used to redirect the standard input of a child process using dup2(), for example by using the < operator to specify an input file.
+Testing: The files for testing batchmode are error.sh, redirect.sh, wildcard.sh, pipes.sh

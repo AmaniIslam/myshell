@@ -12,10 +12,9 @@
 #define BUFF_SIZE 1024
 void introTag(int);
 int re_pipe(char **, char **, char *, char *, char *);
-int execCommand(char *,int);
+int execCommand(char *, int);
 int redirection(char **, int, char *);
 int pwd_cd(char **);
-
 
 int main(int argc, char *argv[])
 {
@@ -55,7 +54,7 @@ int main(int argc, char *argv[])
     by newline characters, and executing each command as soon as
     it is complete.
     */
-    
+
     while ((nBytes = read(FD, buffer, BUFF_SIZE)) > 0)
     {
         for (int i = 0; i < nBytes; i++)
@@ -64,9 +63,9 @@ int main(int argc, char *argv[])
             {
                 line[pos] = '\0';
                 if (argc == 2)
-                    execCommand(line,FD);
+                    execCommand(line, FD);
                 if (argc == 1)
-                    introTag(execCommand(line,FD));
+                    introTag(execCommand(line, FD));
                 pos = 0;
             }
             else
@@ -84,17 +83,19 @@ int main(int argc, char *argv[])
     return 0;
 }
 //________________________________________________________________________________
-int execCommand(char *command,int mode)
+int execCommand(char *command, int mode)
 {
     // printf("%s\n", command);
-    int returnVal=0; 
+    int returnVal = 0;
     char *arr[BUFF_SIZE];
     /*Initialize an array to hold the command arguments and a variable to keep
     track of the number of arguments:
     */
+    int sCard = 0;
     int aCount = 0;
     char *token = strtok(command, " \t\n");
     int pos = 0;
+    int sPos = 0;
     int wCard = 0;
     char *input = NULL;
     char *output = NULL;
@@ -105,7 +106,6 @@ int execCommand(char *command,int mode)
 
     // int sCard = 0;
 
-    
     while (token != NULL)
     {
         if (token[0] == '>')
@@ -127,8 +127,8 @@ int execCommand(char *command,int mode)
         }
 
         if (strchr(token, '*') != NULL)
-        { // wildcard
-            pos = aCount;//assigning the position to pos
+        {                 // wildcard
+            pos = aCount; // assigning the position to pos
             wCard = 1;
         }
 
@@ -150,6 +150,12 @@ int execCommand(char *command,int mode)
                     continue;
                 }
 
+                if (strchr(token, '*') != NULL)
+                {                  // wildcard
+                    sPos = sCount; // assigning the position to pos
+                    sCard = 1;
+                }
+
                 sub[sCount] = token;
                 sCount++;
                 token = strtok(NULL, " \t\n");
@@ -165,67 +171,125 @@ int execCommand(char *command,int mode)
     }
     arr[aCount] = NULL; // for execvp
 
+    for (int i = 0; i < aCount; i++)
+    {
+        for (int k = 0; k < strlen(arr[i]); k++)
+        {
 
-    for (int i = 0; i < aCount; i++){
-        for (int k=0; k < strlen(arr[i]); k++){
-            
-            if (strlen(arr[i]) > 2 && arr[i][k] == '*' && arr[i][k + 1] == '/' && arr[i][k + 2] == '*'){
-            wCard=1; 
-            }
+            if (strlen(arr[i]) > 2 && arr[i][k] == '*' && arr[i][k + 1] == '/' && arr[i][k + 2] == '*')
+                wCard = 1;
         }
     }
-//wildcard
-    glob_t globbuf;
+    // wildcard
+    glob_t globbuf, subglob;
 
-    if (wCard != 0){
+    if (wCard != 0)
+    {
         char *copyArr[BUFF_SIZE];
-        int dup = pos; 
-        for (int i = 0; i < aCount; i++){
-        copyArr[i] = (char*) malloc(strlen(arr[i]) + 1);
-            for (int k=0; k < strlen(arr[i]); k++){
-                copyArr[i][k]=arr[i][k];
+        int dup = pos;
+        for (int i = 0; i < aCount; i++)
+        {
+            copyArr[i] = (char *)malloc(strlen(arr[i]) + 1);
+            for (int k = 0; k < strlen(arr[i]); k++)
+            {
+                copyArr[i][k] = arr[i][k];
             }
-        copyArr[i][strlen(arr[i])] = '\0';
-
+            copyArr[i][strlen(arr[i])] = '\0';
         }
-            arr[aCount] = 0; 
+        arr[aCount] = 0;
         int k;
 
         int val = glob(arr[pos], GLOB_NOCHECK | GLOB_TILDE, NULL, &globbuf);
-        int count=0; 
+        int count = 0;
 
-        if (val != 0){
+        if (val != 0)
+        {
             printf("Error: glob() failed \n");
             exit(1);
         }
-        if(val == GLOB_NOMATCH){
+        if (val == GLOB_NOMATCH)
+        {
             arr[aCount] = NULL;
-            return 1; 
+            return 1;
         }
-        if(val==0){
-            for (k = 0; k < globbuf.gl_pathc; k++){
-            // printf("%s\n", globbuf.gl_pathv[k]);
-            arr[pos] = globbuf.gl_pathv[k];
-            pos++;      
-            count++;
-        } 
-        if(strcmp(arr[dup],copyArr[dup])==0){
-        printf("Error no match\n");
-        for (int i = 0; i < aCount; i++) {
-        free(copyArr[i]);
-        }
-        globfree(&globbuf); 
-        return 1; 
+        if (val == 0)
+        {
+            for (k = 0; k < globbuf.gl_pathc; k++)
+            {
+                // printf("%s\n", globbuf.gl_pathv[k]);
+                arr[pos] = globbuf.gl_pathv[k];
+                pos++;
+                count++;
             }
-        for (int i = 0; i < aCount; i++) {
-        free(copyArr[i]);
+            if (strcmp(arr[dup], copyArr[dup]) == 0)
+            {
+                printf("Error no match\n");
+                for (int i = 0; i < aCount; i++)
+                {
+                    free(copyArr[i]);
+                }
+                globfree(&globbuf);
+                return 1;
+            }
+            for (int i = 0; i < aCount; i++)
+                free(copyArr[i]);
         }
+    }
+
+    if (sCard != 0)
+    {
+        char *copyArr[BUFF_SIZE];
+        int dup = sPos;
+        for (int i = 0; i < sCount; i++)
+        {
+            copyArr[i] = (char *)malloc(strlen(sub[i]) + 1);
+            for (int k = 0; k < strlen(sub[i]); k++)
+            {
+                copyArr[i][k] = sub[i][k];
+            }
+            copyArr[i][strlen(sub[i])] = '\0';
+        }
+        sub[sCount] = 0;
+        int k;
+
+        int val = glob(sub[sPos], GLOB_NOCHECK | GLOB_TILDE, NULL, &subglob);
+        int count = 0;
+
+        if (val != 0)
+        {
+            printf("Error: glob() failed \n");
+            exit(1);
+        }
+        if (val == GLOB_NOMATCH)
+        {
+            sub[sCount] = NULL;
+            return 1;
+        }
+        if (val == 0)
+        {
+            for (k = 0; k < subglob.gl_pathc; k++)
+            {
+                // printf("%s\n", globbuf.gl_pathv[k]);
+                sub[sPos] = subglob.gl_pathv[k];
+                sPos++;
+                count++;
+            }
+            if (strcmp(sub[dup], copyArr[dup]) == 0)
+            {
+                printf("Error no match\n");
+                for (int i = 0; i < sCount; i++)
+                    free(copyArr[i]);
+
+                globfree(&subglob);
+                return 1;
+            }
+            for (int i = 0; i < sCount; i++)
+                free(copyArr[i]);
         }
     }
 
     if (arr[0][0] == '~' && (arr[0][1] == '\0' || arr[0][1] == '/'))
     {
-
         // extention 3.2            : ~/
         char homePath[BUFF_SIZE];
         const char *homeDirectory = getenv("HOME");
@@ -243,24 +307,24 @@ int execCommand(char *command,int mode)
         }
         return 0;
     }
-    int path=0;
+    int path = 0;
     if (arr[0][0] == '/')
     {
-        path=1;
+        path = 1;
         char *new_str = malloc(strlen(arr[0]) + 2);
         new_str[0] = '.';
         strcpy(new_str + 1, arr[0]);
         arr[0] = new_str;
-        //may need to be freed
+        // may need to be freed
     }
-    // int sPath=0;
+    int sPath = 0;
     if (sub[0] != NULL && sub[0][0] == '/')
     {
-        // sPath=1;
+        sPath = 1;
         char *new_str = malloc(strlen(sub[0]) + 2);
         new_str[0] = '.';
         strcpy(new_str + 1, sub[0]);
-        sub[0] = new_str;   
+        sub[0] = new_str;
     }
 
     if (sub[0] != NULL)
@@ -270,7 +334,13 @@ int execCommand(char *command,int mode)
             if ((strcmp(sub[0], "cd") == 0 || strcmp(sub[0], "pwd") == 0) && subOutput == NULL)
                 pwd_cd(sub);
             else
+            {
                 re_pipe(sub, space, subOutput, input, subOutput);
+                if (sCard != 0)
+                    globfree(&subglob);
+                if (sPath)
+                    free(sub[0]);
+            }
             exit(1);
         }
 
@@ -279,68 +349,76 @@ int execCommand(char *command,int mode)
             if (strcmp(arr[0], "cd") == 0 || (strcmp(arr[0], "pwd") == 0 && output == NULL))
                 pwd_cd(arr);
             else
+            {
                 re_pipe(arr, space, output, input, subOutput);
+                if (wCard != 0)
+                    globfree(&globbuf);
+                if (path)
+                    free(arr[0]);
+            }
             exit(1);
         }
 
         if (strcmp(arr[0], "cd") == 0)
         {
-            if (strcmp(sub[0], "cd") == 0 || (strcmp(sub[0], "pwd") == 0 && subOutput == NULL)){
-                returnVal= pwd_cd(arr) + pwd_cd(sub);
-                if(wCard!=0)
-                globfree(&globbuf);
-                return returnVal;
-                }
-            returnVal= pwd_cd(arr) + re_pipe(sub, space, subOutput, input, subOutput);
-            if(wCard!=0){
-            globfree(&globbuf);}
+            if (strcmp(sub[0], "cd") == 0 || (strcmp(sub[0], "pwd") == 0 && subOutput == NULL))
+                return pwd_cd(arr) + pwd_cd(sub);
+
+            returnVal = pwd_cd(arr) + re_pipe(sub, space, subOutput, input, subOutput);
+
+            if (sCard != 0)
+                globfree(&subglob);
+            if (sPath)
+                free(sub[0]);
             return returnVal;
         }
 
         if (strcmp(sub[0], "cd") == 0)
         {
-            if (strcmp(arr[0], "pwd") == 0){
-                returnVal= pwd_cd(arr) + pwd_cd(sub);
-                if(wCard!=0){
-                globfree(&globbuf);}
-                return returnVal;
-            }
+            if (strcmp(arr[0], "pwd") == 0)
+                return pwd_cd(arr) + pwd_cd(sub);
 
             returnVal = re_pipe(arr, space, output, input, subOutput) + pwd_cd(sub);
-            if(wCard!=0){
-            globfree(&globbuf);}
+            if (wCard != 0)
+                globfree(&globbuf);
+            if (path)
+                free(arr[0]);
             return returnVal;
         }
 
         returnVal = re_pipe(arr, sub, output, input, subOutput);
-        if(wCard!=0){
-        globfree(&globbuf);}
+        if (wCard != 0)
+            globfree(&globbuf);
+        if (sCard != 0)
+            globfree(&subglob);
+        if (path)
+            free(arr[0]);
+        if (sPath)
+            free(sub[0]);
         return returnVal;
     }
 
-    if (strcmp(arr[0], "exit") == 0){//check this for works everytime make sure
-        if(mode == STDIN_FILENO){
+    if (strcmp(arr[0], "exit") == 0)
+    { // check this for works everytime make sure
+        if (mode == STDIN_FILENO)
             printf("Exiting!\n");
-        }
+
         exit(1);
     }
 
-    if (strcmp(arr[0], "cd") == 0 || (strcmp(arr[0], "pwd") == 0 && output == NULL)){
-        returnVal= pwd_cd(arr);
-        if(wCard!=0){
-        globfree(&globbuf);}
-        return returnVal;
-    }
-
-    printf("%s\n",arr[0]);
+    if (strcmp(arr[0], "cd") == 0 || (strcmp(arr[0], "pwd") == 0 && output == NULL))
+        return pwd_cd(arr);
 
     returnVal = re_pipe(arr, sub, output, input, subOutput);
-    if(wCard!=0){
-    globfree(&globbuf);}
-    if(path)
-    free(arr[0]);
+    if (wCard != 0)
+        globfree(&globbuf);
+    if (sCard != 0)
+        globfree(&subglob);
+    if (path)
+        free(arr[0]);
+    if (sPath)
+        free(sub[0]);
     return returnVal;
-
 }
 
 int re_pipe(char **first, char **second, char *output, char *input, char *subOutput)
@@ -538,7 +616,7 @@ int pwd_cd(char **arr)
 
             return 0;
         }
-    
+
         printf("error too many cd args\n");
         return 1;
     }
