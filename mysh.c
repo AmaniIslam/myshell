@@ -104,7 +104,8 @@ int execCommand(char *command, int mode)
     int sCount = 0;
     char *space[1];
 
-    // int sCard = 0;
+    memset(arr, 0, sizeof(arr));
+    memset(sub, 0, sizeof(sub));
 
     while (token != NULL)
     {
@@ -421,13 +422,128 @@ int execCommand(char *command, int mode)
     return returnVal;
 }
 
+/*
+int re_pipe(char **first, char **second, char *output, char *input, char *subOutput)
+{
+    if (second[0] != NULL)
+        printf("%s\n", second[0]);
+
+    int pipefd[2];
+    int fd_in = STDIN_FILENO;
+    int fd_out = STDOUT_FILENO;
+
+    if (input != NULL)
+    {
+        fd_in = open(input, O_RDONLY);
+        if (fd_in < 0)
+        {
+            perror("open");
+            return -1;
+        }
+    }
+
+    if (output != NULL)
+    {
+        fd_out = open(output, O_WRONLY | O_CREAT | O_TRUNC, 0666);
+        if (fd_out < 0)
+        {
+            perror("open");
+            return -1;
+        }
+    }
+
+    if (subOutput != NULL)
+    {
+        int fd_subOut = open(subOutput, O_WRONLY | O_CREAT | O_TRUNC, 0666);
+        if (fd_subOut < 0)
+        {
+            perror("open");
+            return -1;
+        }
+        dup2(fd_subOut, STDERR_FILENO);
+        close(fd_subOut);
+    }
+
+    if (second[0] != NULL)
+    {
+        if (pipe(pipefd) < 0)
+        {
+            perror("pipe");
+            return -1;
+        }
+    }
+
+    pid_t pid = fork();
+
+    if (pid == 0)
+    {
+
+        if (input != NULL)
+        {
+            dup2(fd_in, STDIN_FILENO);
+            close(fd_in);
+        }
+
+        if (output != NULL)
+        {
+            dup2(fd_out, STDOUT_FILENO);
+            close(fd_out);
+        }
+
+        if (second != NULL)
+        {
+            close(pipefd[0]);
+            dup2(pipefd[1], STDOUT_FILENO);
+            close(pipefd[1]);
+        }
+
+        execvp(first[0], first);
+        perror("execvp1");
+    }
+
+    if (second[0] != NULL)
+    {
+        pid_t pid2 = fork();
+
+        if (pid2 == 0)
+        {
+            if (output != NULL)
+            {
+                int fd_out2 = open(output, O_WRONLY | O_CREAT | O_TRUNC, 0666);
+                if (fd_out2 < 0)
+                {
+                    perror("open");
+                    return -1;
+                }
+                dup2(fd_out2, STDOUT_FILENO);
+                close(fd_out2);
+            }
+
+            close(pipefd[1]);
+            dup2(pipefd[0], STDIN_FILENO);
+            close(pipefd[0]);
+
+            execvp(second[0], second);
+            perror("execvp2");
+        }
+
+        close(pipefd[0]);
+        close(pipefd[1]);
+
+        waitpid(pid2, NULL, 0);
+    }
+
+    waitpid(pid, NULL, 0);
+    return 0;
+}
+*/
+
 int re_pipe(char **first, char **second, char *output, char *input, char *subOutput)
 {
     int pipefd[2];
     pid_t pid1, pid2;
     int fd;
     int fDir;
-    int stat;
 
     if (second[0] != NULL && pipe(pipefd) == -1)
     {
@@ -460,6 +576,7 @@ int re_pipe(char **first, char **second, char *output, char *input, char *subOut
                 perror("dup2");
                 return 1;
             }
+            close(fd);
         }
 
         if (input != NULL)
@@ -469,6 +586,7 @@ int re_pipe(char **first, char **second, char *output, char *input, char *subOut
             fDir = open(input, O_RDONLY);
             if (fDir == -1)
             {
+                printf("%s\n", output);
                 perror("open");
                 return 1;
             }
@@ -477,6 +595,7 @@ int re_pipe(char **first, char **second, char *output, char *input, char *subOut
                 perror("dup2");
                 return 1;
             }
+            close(fDir);
         }
 
         if (second[0] != NULL)
@@ -489,6 +608,7 @@ int re_pipe(char **first, char **second, char *output, char *input, char *subOut
                 perror("dup2");
                 return 1;
             }
+            close(pipefd[1]);
         }
 
         if (execvp(first[0], first) == -1)
@@ -497,7 +617,6 @@ int re_pipe(char **first, char **second, char *output, char *input, char *subOut
             return 1;
         }
     }
-
     if (second[0] != NULL)
     {
         pid2 = fork();
@@ -508,47 +627,45 @@ int re_pipe(char **first, char **second, char *output, char *input, char *subOut
         }
         else if (pid2 == 0)
         {
-            // Child process 2
+            // Child process 1
+
             if (subOutput != NULL)
             {
+                //>
                 fd = open(subOutput, O_WRONLY | O_CREAT | O_TRUNC, S_IRUSR | S_IWUSR | S_IRGRP);
                 if (fd < 0)
                 {
                     perror("open");
                     return 1;
                 }
+
                 if (dup2(fd, STDOUT_FILENO) == -1)
                 {
                     perror("dup2");
                     return 1;
                 }
+                close(fd);
             }
             // No redirection
-            close(pipefd[1]); // Close write end of pipe
+            close(pipefd[1]); // Close read end of pipe
             if (dup2(pipefd[0], STDIN_FILENO) == -1)
             {
                 perror("dup2");
                 return 1;
             }
+            close(pipefd[0]);
 
             if (execvp(second[0], second) == -1)
             {
-                perror("exec command2");
+                perror("exec command1");
                 return 1;
             }
-
-            return 0;
         }
-
-        // Parent process
-        close(pipefd[0]); // Close read end of pipe in parent
-        close(pipefd[1]); // Close write end of pipe in parent
-        waitpid(pid1, &stat, 0);
-        waitpid(pid2, &stat, 0);
+        close(pipefd[0]);
+        close(pipefd[1]);
+        waitpid(pid2, NULL, 0);
     }
-    else
-        waitpid(pid1, &stat, 0);
-
+    waitpid(pid1, NULL, 0);
     return 0;
 }
 

@@ -1,5 +1,6 @@
 # myshell
-
+#Amani Islam - ai326
+#Madhur Nutulaputi - mn712
 Logic and Algorithm 
 
 main method:
