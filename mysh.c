@@ -277,7 +277,7 @@ int execCommand(char *command, int mode)
             if (strcmp(sub[dup], copyArr[dup]) == 0)
             {
                 printf("Error no match\n");
-                for (int i = 0; i < sCount; i++)
+                for (int i = 0; i < sCount; i++)x
                     free(copyArr[i]);
 
                 globfree(&subglob);
