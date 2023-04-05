@@ -1,7 +1,7 @@
 pwd
 cd ..
 cd ..
-cd Pa2
+cd subdir1
 pwd
 cd
 pwd
