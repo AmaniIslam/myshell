@@ -224,11 +224,10 @@ int execCommand(char *command, int mode)
             }
             if (strcmp(arr[dup], copyArr[dup]) == 0)
             {
-                printf("Error no match\n");
+                perror("glob");
                 for (int i = 0; i < aCount; i++)
-                {
                     free(copyArr[i]);
-                }
+
                 globfree(&globbuf);
                 return 1;
             }
@@ -278,7 +277,7 @@ int execCommand(char *command, int mode)
             if (strcmp(sub[dup], copyArr[dup]) == 0)
             {
                 printf("Error no match\n");
-                for (int i = 0; i < sCount; i++)x
+                for (int i = 0; i < sCount; i++)
                     free(copyArr[i]);
 
                 globfree(&subglob);
@@ -404,7 +403,7 @@ int execCommand(char *command, int mode)
         if (mode == STDIN_FILENO)
             printf("Exiting!\n");
 
-        exit(1);
+        exit(0);
     }
 
     if (strcmp(arr[0], "cd") == 0 || (strcmp(arr[0], "pwd") == 0 && output == NULL))
@@ -696,7 +695,7 @@ int pwd_cd(char **arr)
             return 0;
         }
 
-        printf("error too many pwd args\n");
+        perror("pwd");
         return 1;
     }
 
@@ -734,7 +733,7 @@ int pwd_cd(char **arr)
             return 0;
         }
 
-        printf("error too many cd args\n");
+        perror("cd");
         return 1;
     }
 
